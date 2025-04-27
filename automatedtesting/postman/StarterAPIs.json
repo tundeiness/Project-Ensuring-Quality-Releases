@@ -6,7 +6,7 @@
 	},
 	"item": [
 		{
-			"name": "Create Author",
+			"name": "Create Employee",
 			"event": [
 				{
 					"listen": "test",
@@ -17,7 +17,7 @@
 							"    pm.expect(pm.response.text()).to.include(\"success\");",
 							"});",
 							"var json = pm.response.json();",
-							"pm.environment.set(\"id\", json.id);"
+							"pm.environment.set(\"id\", json.data.id);"
 						],
 						"type": "text/javascript"
 					}
@@ -25,15 +25,10 @@
 			],
 			"request": {
 				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
+				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"id\": 0,\n    \"idBook\": 0,\n    \"firstName\": \"{{firstName}}\",\n    \"lastName\": \"{{lastName}}\"\n}",
+					"raw": "{\n    \"name\": \"{{name}}\",\n    \"salary\": \"{{salary}}\",\n    \"age\": \"{{age}}\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -41,24 +36,24 @@
 					}
 				},
 				"url": {
-					"raw": "https://fakerestapi.azurewebsites.net/api/v1/Authors",
-					"protocol": "https",
+					"raw": "http://dummy.restapiexample.com/api/v1/create",
+					"protocol": "http",
 					"host": [
-						"fakerestapi",
-						"azurewebsites",
-						"net"
+						"dummy",
+						"restapiexample",
+						"com"
 					],
 					"path": [
 						"api",
 						"v1",
-						"Authors"
+						"create"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Get All Authors",
+			"name": "Get All Employees",
 			"event": [
 				{
 					"listen": "test",
@@ -78,17 +73,17 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://fakerestapi.azurewebsites.net/api/v1/Authors",
-					"protocol": "https",
+					"raw": "http://dummy.restapiexample.com/api/v1/employees",
+					"protocol": "http",
 					"host": [
-						"fakerestapi",
-						"azurewebsites",
-						"net"
+						"dummy",
+						"restapiexample",
+						"com"
 					],
 					"path": [
 						"api",
 						"v1",
-						"Authors"
+						"employees"
 					]
 				}
 			},
