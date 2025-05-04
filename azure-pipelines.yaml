@@ -1,125 +1,85 @@
 name: Azure Pipelines
 
 trigger:
-- main
+  - main
 
-pool: myAgentPool
+pool:
+  name: myAgentPool
 
 variables:
-  python.version: '3.7.17'
+  python_version: '3.7.17'
   azureServiceConnectionId: 'servixconnex'
   projectRoot: $(System.DefaultWorkingDirectory)
   environmentName: 'test'
 
-
 stages:
-- stage: Build
-  jobs:
-  - job: BuildInfrastructure
-    steps:
-    # Install Terraform on the pipeline agent 
-    - task: TerraformInstaller@0
-      displayName: 'Terrafom installation'
-      inputs:
-        terraformVersion: '1.10.5'
-    
-    # Run Terraform Init on the pipeline agent 
-    # ToDo: Replace the resource group name, storage account name, and container name below
-    - task: TerraformTaskV3@3
-      displayName: 'Terrafom init'
-      inputs:
-        provider: 'azurerm'
-        command: 'init'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-        backendServiceArm: '$(azureServiceConnectionId)'
-        backendAzureRmResourceGroupName: 'Azuredevops'
-        backendAzureRmStorageAccountName: 'tfstate7393818'
-        backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'test.terraform.tfstate'
+  - stage: Build
+    displayName: 'Build and Package FakeRestAPI'
+    jobs:
+      - job: Build
+        displayName: 'Archive and Upload Artifact'
+        pool:
+          name: myAgentPool
+        steps:
+          # Uncomment if SSH key is needed for VM deployments
+          # - task: InstallSSHKey@0
+          #   inputs:
+          #     knownHostsEntry: 'KNOWN_HOSTS_STRING'
+          #     sshPublicKey: 'PUBLIC_KEY'
+          #     sshKeySecureFile: 'id_rsa'
 
-    # Run Terraform Validate    
-    - task: TerraformTaskV3@3
-      displayName: Terraform validate
-      inputs:
-        provider: 'azurerm'
-        command: 'validate'
+          - task: ArchiveFiles@2
+            displayName: 'Archive FakeRestAPI'
+            inputs:
+              rootFolderOrFile: 'path/to/fakerestapi'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
 
-    
-    # Run Terraform Apply
-    # ToDo: Change the workingDirectory path, as applicable to you
-    - task: TerraformTaskV3@3
-      displayName: Terraform apply
-      inputs:
-        provider: 'azurerm'
-        command: 'apply'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+          - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip
+            displayName: 'Upload Package'
+            artifact: drop-fakerestapi
 
-    # Destroy the resources in Azure
-    # ToDo: Change the workingDirectory path, as applicable to you
-    - task: TerraformTaskV3@3
-      displayName: Terraform destroy
-      inputs:
-        provider: 'azurerm'
-        command: 'destroy'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'        
-  # - job: Build
-  #   pool: myAgentPool
-  #   steps:
-    # Needed for Terraform VM deployment
-    # - task: InstallSSHKey@0
-    #   inputs:
-    #     knownHostsEntry: 'KNOWN_HOSTS_STRING'
-    #     sshPublicKey: 'PUBLIC_KEY'
-    #     sshKeySecureFile: 'id_rsa'
-#     - task: ArchiveFiles@2
-#       displayName: 'Archive FakeRestAPI'
-#       inputs:
-#         rootFolderOrFile: 'path/to/fakerestapi'
-#         includeRootFolder: false
-#         archiveType: 'zip'
-#         archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-#     - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip
-#       displayName: 'Upload Package'
-#       artifact: drop-fakerestapi
-# - stage:
-#   jobs:
-#   - deployment: FakeRestAPI
-#     pool: myagentpool
-#     environment: 'TEST'
-#     strategy:
-#       runOnce:
-#         deploy:
-#           steps:
-#           - task: AzureWebApp@1
-#             displayName: 'Deploy Azure Web App'
-#             inputs:
-#               azureSubscription: ''
-#               appName: ''
-#               appType: webApp
-#               package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
-  # - deployment: VMDeploy
-  #   displayName: NAME
-  #   environment:
-  #     name:  ENVIRONMENT NAME
-  #     resourceType: VirtualMachine
-  #     tags: TAG NAME
-  #   strategy:
-  #     runOnce:
-  #       deploy:
-  #         steps:
-  #         - task: Bash@3
-  #           inputs:
-  #             targetType: 'inline'
-  #             script: |
-  #               #! /bin/bash
-                
-  #               sudo apt-get upgrade -y
-  #               sudo apt-get install python3-pip -y
-  #               sudo apt-get install unzip -y
-  #               sudo apt-get install -y chromium-browser
-  #               pip3 install selenium
-  #               export PATH=$PATH:some/path
+  - stage: Deploy
+    displayName: 'Deploy to Azure'
+    dependsOn: Build
+    jobs:
+      - deployment: FakeRestAPI
+        displayName: 'Deploy Web App'
+        pool:
+          vmImage: 'ubuntu-16.04'
+        environment: 'TEST'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  displayName: 'Deploy Azure Web App'
+                  inputs:
+                    azureSubscription: '$(azureServiceConnectionId)'
+                    appName: '<your-app-name>'
+                    appType: webApp
+                    package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
 
-
+      # Optional VM Deployment Block
+      # - deployment: VMDeploy
+      #   displayName: 'Deploy to VM'
+      #   environment:
+      #     name: '<environment-name>'
+      #     resourceType: VirtualMachine
+      #     tags: '<tag-name>'
+      #   strategy:
+      #     runOnce:
+      #       deploy:
+      #         steps:
+      #           - task: Bash@3
+      #             inputs:
+      #               targetType: 'inline'
+      #               script: |
+      #                 #! /bin/bash
+      #                 sudo apt-get upgrade -y
+      #                 sudo apt-get install python3-pip -y
+      #                 sudo apt-get install unzip -y
+      #                 sudo apt-get install -y chromium-browser
+      #                 pip3 install selenium
+      #                 export PATH=$PATH:/some/path
