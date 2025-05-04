@@ -31,7 +31,7 @@ stages:
           - task: ArchiveFiles@2
             displayName: 'Archive FakeRestAPI'
             inputs:
-              rootFolderOrFile: './StarterAPIs.json'
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/StarterAPIs.json'
               includeRootFolder: false
               archiveType: 'zip'
               archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
