@@ -29,14 +29,14 @@ stages:
           #     sshKeySecureFile: 'id_rsa'
 
           - task: ArchiveFiles@2
-            displayName: 'Archive FakeRestAPI'
+            displayName: 'Archive StarterAPIs.json'
             inputs:
               rootFolderOrFile: '$(System.DefaultWorkingDirectory)/StarterAPIs.json'
               includeRootFolder: false
               archiveType: 'zip'
-              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-starterapis.zip'
 
-          - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip
+          - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-starterapis.zip
             displayName: 'Upload Package'
             artifact: drop-fakerestapi
 
@@ -46,7 +46,8 @@ stages:
     jobs:
       - deployment: FakeRestAPI
         displayName: 'Deploy Web App'
-        pool: myAgentPool
+        pool:
+          name: myAgentPool
         environment: 'TEST'
         strategy:
           runOnce:
@@ -58,7 +59,7 @@ stages:
                     azureSubscription: '$(azureServiceConnectionId)'
                     appName: 'myApplication-AppService'
                     appType: webApp
-                    package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
+                    package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-starterapis.zip
 
       # Optional VM Deployment Block
       # - deployment: VMDeploy
