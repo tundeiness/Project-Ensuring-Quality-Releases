@@ -24,3 +24,8 @@ stages:
         script: |
           #! /bin/bash
           pwd
+
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.10.5'
