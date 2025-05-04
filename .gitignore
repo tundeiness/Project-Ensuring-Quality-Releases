@@ -3,7 +3,7 @@
 **/*.exe
 # Local .terraform directories
 **/.terraform/*
-
+terraform/terraform.tfvars
 # .tfstate files
 *.tfstate
 *.tfstate.*
@@ -23,3 +23,13 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+
+
+# Terraform gitignore
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+*.tfvars
+.terraform.lock.hcl
