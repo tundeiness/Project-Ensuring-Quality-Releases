@@ -1,85 +1,68 @@
 name: Azure Pipelines
 
+# Minimal pipeline to build and deploy infrastructure with Terraform
 trigger:
   - main
 
+# If using Udacity Cloud lab, keep this line; otherwise, comment it out
 pool:
   name: myAgentPool
 
 variables:
   python_version: '3.7.17'
-  azureServiceConnectionId: 'servixconnex'
+  azureServiceConnectionId: 'servixconnex' 
   projectRoot: $(System.DefaultWorkingDirectory)
   environmentName: 'test'
 
 stages:
   - stage: Build
-    displayName: 'Build and Package FakeRestAPI'
+    displayName: 'Build Infrastructure with Terraform'
     jobs:
-      - job: Build
-        displayName: 'Archive and Upload Artifact'
-        pool:
-          name: myAgentPool
+      - job: BuildInfrastructure
+        displayName: 'Terraform Init, Validate, Apply, and Destroy'
         steps:
-          # Uncomment if SSH key is needed for VM deployments
-          # - task: InstallSSHKey@0
-          #   inputs:
-          #     knownHostsEntry: 'KNOWN_HOSTS_STRING'
-          #     sshPublicKey: 'PUBLIC_KEY'
-          #     sshKeySecureFile: 'id_rsa'
-
-          - task: ArchiveFiles@2
-            displayName: 'Archive StarterAPIs.json'
+          # Install Terraform on the pipeline agent
+          - task: TerraformInstaller@0
+            displayName: 'Terraform Installation'
             inputs:
-              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/StarterAPIs.json'
-              includeRootFolder: false
-              archiveType: 'zip'
-              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-starterapis.zip'
+              terraformVersion: '1.11.4'
+          
+          # Terraform Init
+          - task: TerraformTaskV3@3
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+              backendServiceArm: '$(azureServiceConnectionId)'
+              backendAzureRmResourceGroupName: 'Azuredevops'              
+              backendAzureRmStorageAccountName: 'tfstate7393818'        
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'test.terraform.tfstate'
+          
+          # Terraform Validate
+          - task: TerraformTaskV3@3
+            displayName: 'Terraform Validate'
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-          - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-starterapis.zip
-            displayName: 'Upload Package'
-            artifact: drop-fakerestapi
+          # Terraform Apply
+          - task: TerraformTaskV3@3
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-  - stage: Deploy
-    displayName: 'Deploy to Azure'
-    dependsOn: Build
-    jobs:
-      - deployment: FakeRestAPI
-        displayName: 'Deploy Web App'
-        pool:
-          name: myAgentPool
-        environment: 'TEST'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureWebApp@1
-                  displayName: 'Deploy Azure Web App'
-                  inputs:
-                    azureSubscription: '$(azureServiceConnectionId)'
-                    appName: 'myApplication-AppService'
-                    appType: webApp
-                    package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-starterapis.zip
-
-      # Optional VM Deployment Block
-      # - deployment: VMDeploy
-      #   displayName: 'Deploy to VM'
-      #   environment:
-      #     name: '<environment-name>'
-      #     resourceType: VirtualMachine
-      #     tags: '<tag-name>'
-      #   strategy:
-      #     runOnce:
-      #       deploy:
-      #         steps:
-      #           - task: Bash@3
-      #             inputs:
-      #               targetType: 'inline'
-      #               script: |
-      #                 #! /bin/bash
-      #                 sudo apt-get upgrade -y
-      #                 sudo apt-get install python3-pip -y
-      #                 sudo apt-get install unzip -y
-      #                 sudo apt-get install -y chromium-browser
-      #                 pip3 install selenium
-      #                 export PATH=$PATH:/some/path
+          # Terraform Destroy (optional cleanup)
+          # - task: TerraformTaskV3@3
+          #   displayName: 'Terraform Destroy'
+          #   inputs:
+          #     provider: 'azurerm'
+          #     command: 'destroy'
+          #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+          #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
