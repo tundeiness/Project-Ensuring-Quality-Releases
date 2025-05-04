@@ -31,7 +31,7 @@ stages:
           - task: ArchiveFiles@2
             displayName: 'Archive FakeRestAPI'
             inputs:
-              rootFolderOrFile: 'path/to/fakerestapi'
+              rootFolderOrFile: './StarterAPIs.json'
               includeRootFolder: false
               archiveType: 'zip'
               archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
@@ -46,8 +46,7 @@ stages:
     jobs:
       - deployment: FakeRestAPI
         displayName: 'Deploy Web App'
-        pool:
-          vmImage: 'ubuntu-16.04'
+        pool: myAgentPool
         environment: 'TEST'
         strategy:
           runOnce:
@@ -57,7 +56,7 @@ stages:
                   displayName: 'Deploy Azure Web App'
                   inputs:
                     azureSubscription: '$(azureServiceConnectionId)'
-                    appName: '<your-app-name>'
+                    appName: 'myApplication-AppService'
                     appType: webApp
                     package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
 
