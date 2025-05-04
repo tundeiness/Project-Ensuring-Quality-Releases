@@ -4,10 +4,6 @@ name: Azure Pipelines
 trigger:
   - main
 
-# If using Udacity Cloud lab, keep this line; otherwise, comment it out
-pool:
-  name: myAgentPool
-
 variables:
   python_version: '3.7.17'
   azureServiceConnectionId: 'servixconnex' 
@@ -15,54 +11,16 @@ variables:
   environmentName: 'test'
 
 stages:
-  - stage: Build
-    displayName: 'Build Infrastructure with Terraform'
-    jobs:
-      - job: BuildInfrastructure
-        displayName: 'Terraform Init, Validate, Apply, and Destroy'
-        steps:
-          # Install Terraform on the pipeline agent
-          - task: TerraformInstaller@0
-            displayName: 'Terraform Installation'
-            inputs:
-              terraformVersion: '1.10.5'
-          
-          # Terraform Init
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Init'
-            inputs:
-              provider: 'azurerm'
-              command: 'init'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
-              backendServiceArm: '$(azureServiceConnectionId)'
-              backendAzureRmResourceGroupName: 'Azuredevops'              
-              backendAzureRmStorageAccountName: 'tfstate7393818'        
-              backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'test.terraform.tfstate'
-          
-          # Terraform Validate
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Validate'
-            inputs:
-              provider: 'azurerm'
-              command: 'validate'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+- stage: Build
+  jobs:
+  - job: Build
+    pool: myAgentPool
+    steps:
 
-          # Terraform Apply
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Apply'
-            inputs:
-              provider: 'azurerm'
-              command: 'apply'
-              workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
-
-          # Terraform Destroy (optional cleanup)
-          # - task: TerraformTaskV3@3
-          #   displayName: 'Terraform Destroy'
-          #   inputs:
-          #     provider: 'azurerm'
-          #     command: 'destroy'
-          #     workingDirectory: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
-          #     environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+    - task: Bash@3
+      displayName: 'Install Postman & Newman'
+      inputs:
+        targetType: 'inline'
+        script: |
+          #! /bin/bash
+          pwd
