@@ -14,3 +14,7 @@ variable virtual_network_name {}
 variable address_prefix_test {}
 variable address_space {}
 
+# VM
+variable number_of_vms {}
+variable packer_image {}
+

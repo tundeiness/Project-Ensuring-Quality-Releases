@@ -1,6 +1,6 @@
 resource "azurerm_network_interface" "" {
   name                = "nic0"
-  location            = ""
+  location            ="Central US"
   resource_group_name = ""
 
   ip_configuration {
@@ -28,8 +28,8 @@ resource "azurerm_linux_virtual_machine" "" {
   }
   source_image_reference {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "20.04-LTS"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts"
     version   = "latest"
   }
 }
