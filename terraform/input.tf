@@ -18,3 +18,6 @@ variable address_space {}
 variable number_of_vms {}
 variable packer_image {}
 
+variable subnet_id {}
+variable public_ip_id {}
+variable network_security_group_id {}

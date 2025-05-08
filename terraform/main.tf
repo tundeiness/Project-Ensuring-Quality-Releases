@@ -53,6 +53,19 @@ module "publicip" {
   resource_group   = "${module.resource_group.resource_group_name}"
 }
 
+data "azurerm_image" "custom" {
+  name                = "myImage"
+  resource_group_name = "${var.resource_group}"
+}
+
+
 module "vm" {
-  source               = "./modules/vm"
+  source = "./modules/vm"
+
+  location                  = var.location
+  resource_group_name       = module.resource_group.resource_group_name
+  subnet_id                 = module.network.subnet_id
+  public_ip_id              = module.publicip.public_ip_id
+  network_security_group_id = module.nsg.nsg_id
+  image_id                  = data.azurerm_image.custom.id
 }
