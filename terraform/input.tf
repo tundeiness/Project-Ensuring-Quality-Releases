@@ -18,3 +18,4 @@ variable "address_prefix_test" {}
 variable "packer_image" {}
 variable "admin_username" {}
 variable "admin_password" {}
+
