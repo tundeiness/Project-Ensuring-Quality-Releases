@@ -1,43 +1,69 @@
 name: Azure Pipelines
 
-# Minimal pipeline to build and deploy infrastructure with Terraform
 trigger:
   - main
 
 variables:
-  python_version: '3.7.17'
-  azureServiceConnectionId: 'servixconnex' 
+  python_version: '3.8.10'
+  azureServiceConnectionId: 'ServiceConnex'
   projectRoot: $(System.DefaultWorkingDirectory)
   environmentName: 'test'
 
 stages:
 - stage: Build
   jobs:
-  - job: Build
-    pool: myAgentPool
+  - job: BuildInfrastructure
     steps:
-
-    - task: Bash@3
-      displayName: 'Install Postman & Newman'
-      inputs:
-        targetType: 'inline'
-        script: |
-          #! /bin/bash
-          pwd
-
+    # Install Terraform
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: '1.10.5'
 
-    - task: TerraformTaskV1@0
-      displayName: 'Initialize Terraform'
+    # Terraform Init
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Init'
       inputs:
         provider: 'azurerm'
         command: 'init'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        workingDirectory: '$(projectRoot)/terraform/environments/test'
         backendServiceArm: '$(azureServiceConnectionId)'
         backendAzureRmResourceGroupName: 'Azuredevops'
-        backendAzureRmStorageAccountName: 'tfstate7393818'
+        backendAzureRmStorageAccountName: 'tfstate1411330650'
         backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: '"test.terraform.tfstate"'
+        backendAzureRmKey: 'test.terraform.tfstate'
+
+    # Terraform Validate
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(projectRoot)/terraform/environments/test'
+
+    # Terraform Plan (Optional but recommended)
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
+    # Terraform Apply
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Apply'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
+    # Terraform Destroy (optional; should be in a separate stage/job or gated)
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Destroy'
+      inputs:
+        provider: 'azurerm'
+        command: 'destroy'
+        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
