@@ -1,5 +1,5 @@
 resource "azurerm_network_interface" "" {
-  name                = ""
+  name                = "nic0"
   location            = ""
   resource_group_name = ""
 
@@ -19,8 +19,8 @@ resource "azurerm_linux_virtual_machine" "" {
   admin_username      = ""
   network_interface_ids = []
   admin_ssh_key {
-    username   = ""
-    public_key = "file("~/.ssh/id_rsa.pub")"
+    username   = "adminuser"
+    public_key = file("~/Users/tunde/Desktop/udrsa/.ssh/id_rsa.pub")
   }
   os_disk {
     caching           = "ReadWrite"
@@ -29,7 +29,7 @@ resource "azurerm_linux_virtual_machine" "" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
-    sku       = "16.04-LTS"
+    sku       = "20.04-LTS"
     version   = "latest"
   }
 }
