@@ -1,6 +1,5 @@
-
 resource "azurerm_network_interface" "nic" {
-  name                = "vm-nic"
+  name                = "${var.application_type}-nic"
   location            = var.location
   resource_group_name = var.resource_group_name
 
@@ -18,7 +17,7 @@ resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
 }
 
 resource "azurerm_virtual_machine" "vm" {
-  name                  = "vm-machine"
+  name                  = "${var.application_type}-vm"
   location              = var.location
   resource_group_name   = var.resource_group_name
   network_interface_ids = [azurerm_network_interface.nic.id]
@@ -29,16 +28,16 @@ resource "azurerm_virtual_machine" "vm" {
   }
 
   storage_os_disk {
-    name              = "osdisk"
+    name              = "${var.application_type}-osdisk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
 
   os_profile {
-    computer_name  = "vmvnet"
-    admin_username = "azureuser"
-    admin_password = "Password1234!"
+    computer_name  = "${var.application_type}-vm"
+    admin_username = var.admin_username
+    admin_password = var.admin_password
   }
 
   os_profile_linux_config {

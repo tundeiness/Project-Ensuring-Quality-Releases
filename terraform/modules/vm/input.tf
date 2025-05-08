@@ -1,22 +1,11 @@
-variable "subnet_id" {
+variable "subnet_id" {}
+variable "public_ip_id" {}
+variable "network_security_group_id" {}
+variable "image_id" {}
+variable "location" {}
+variable "resource_group_name" {}
 
-}
+variable "admin_username" {}
+variable "admin_password" {}
 
-variable "public_ip_id" {
-
-}
-
-variable "network_security_group_id" {
-
-}
-
-variable "image_id" {
-
-}
-
-variable "location" {
-
-}
-
-variable "resource_group_name" {
-}
+variable "application_type" {}

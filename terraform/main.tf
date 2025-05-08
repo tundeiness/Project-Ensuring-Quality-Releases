@@ -67,7 +67,10 @@ module "vm" {
   resource_group_name       = module.resource_group.resource_group_name
   subnet_id                 = module.network.subnet_id
   public_ip_id              = module.publicip.public_ip_id
-  network_security_group_id = module.nsg.nsg_id
-  image_id                  = data.azurerm_image.custom.id
-  # network_security_group_id = module.nsg.nsg_id
+  network_security_group_id = module.nsg-test.nsg_id
+  image_id                  = var.packer_image
+  admin_username            = var.admin_username
+  admin_password            = var.admin_password
+  application_type          = var.application_type
 }
+
