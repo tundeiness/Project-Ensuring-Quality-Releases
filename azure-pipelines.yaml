@@ -2,7 +2,9 @@ name: Azure Pipelines
 
 trigger:
   - main
-pool: AgentPool
+
+pool:
+  name: AgentPool
 
 variables:
   python_version: '3.8.10'
@@ -15,13 +17,14 @@ stages:
   jobs:
   - job: BuildInfrastructure
     steps:
+
     # Install Terraform
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: '1.10.5'
 
-    # Terraform Init
+    # Terraform Init using AzureRM backend configuration
     - task: TerraformTaskV3@3
       displayName: 'Terraform Init'
       inputs:
@@ -42,7 +45,7 @@ stages:
         command: 'validate'
         workingDirectory: '$(projectRoot)/terraform'
 
-    # Terraform Plan (Optional but recommended)
+    # Terraform Plan
     - task: TerraformTaskV3@3
       displayName: 'Terraform Plan'
       inputs:
@@ -60,7 +63,7 @@ stages:
         workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-    # Terraform Destroy (optional; should be in a separate stage/job or gated)
+    # Terraform Destroy (use with caution)
     - task: TerraformTaskV3@3
       displayName: 'Terraform Destroy'
       inputs:
