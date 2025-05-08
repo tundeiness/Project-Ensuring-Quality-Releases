@@ -27,7 +27,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'init'
-        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        workingDirectory: '$(projectRoot)/terraform'
         backendServiceArm: '$(azureServiceConnectionId)'
         backendAzureRmResourceGroupName: 'Azuredevops'
         backendAzureRmStorageAccountName: 'tfstate1411330650'
@@ -40,7 +40,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'validate'
-        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        workingDirectory: '$(projectRoot)/terraform'
 
     # Terraform Plan (Optional but recommended)
     - task: TerraformTaskV3@3
@@ -48,7 +48,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'plan'
-        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
     # Terraform Apply
@@ -57,7 +57,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
     # Terraform Destroy (optional; should be in a separate stage/job or gated)
@@ -66,5 +66,5 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'destroy'
-        workingDirectory: '$(projectRoot)/terraform/environments/test'
+        workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
