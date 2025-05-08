@@ -19,14 +19,13 @@ stages:
   - job: BuildInfrastructure
     displayName: 'Terraform Infrastructure'
     steps:
-
     # Install Terraform
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
         terraformVersion: '1.10.5'
 
-    # Terraform Init using Azure Service Connection (no use_msi)
+    # Terraform Init using Azure Service Connection properly
     - task: TerraformTaskV3@3
       displayName: 'Terraform Init'
       inputs:
@@ -38,6 +37,7 @@ stages:
         backendAzureRmStorageAccountName: 'tfstate1411330650'
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'test.terraform.tfstate'
+        backendAzureRmUseMsi: false
 
     # Terraform Validate
     - task: TerraformTaskV3@3
