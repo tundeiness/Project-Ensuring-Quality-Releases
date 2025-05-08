@@ -37,7 +37,7 @@ stages:
         backendAzureRmStorageAccountName: 'tfstate1411330650'
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'test.terraform.tfstate'
-        backendAzureRmUseMsi: false
+        
 
     # Terraform Validate
     - task: TerraformTaskV3@3
