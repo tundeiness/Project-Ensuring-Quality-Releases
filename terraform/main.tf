@@ -59,6 +59,7 @@ data "azurerm_image" "custom" {
 }
 
 
+
 module "vm" {
   source = "./modules/vm"
 
@@ -68,4 +69,5 @@ module "vm" {
   public_ip_id              = module.publicip.public_ip_id
   network_security_group_id = module.nsg.nsg_id
   image_id                  = data.azurerm_image.custom.id
+  # network_security_group_id = module.nsg.nsg_id
 }
