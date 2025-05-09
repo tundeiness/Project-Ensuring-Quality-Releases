@@ -6,7 +6,7 @@ trigger:
       - main
 
 pool:
-  name: AgentPool
+  name: myAgentPool
 
 variables:
   python_version: '3.8.10'
