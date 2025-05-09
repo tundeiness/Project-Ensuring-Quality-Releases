@@ -1,46 +1,35 @@
-resource "azurerm_network_interface" "nic" {
-  name                = "${var.application_type}-nic"
-  location            = var.location
-  resource_group_name = var.resource_group_name
+resource "azurerm_network_interface" "" {
+  name                = ""
+  location            = ""
+  resource_group_name = ""
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.subnet_id
-    public_ip_address_id          = var.public_ip_id
+    subnet_id                     = ""
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = ""
   }
 }
 
-resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
-  network_interface_id      = azurerm_network_interface.nic.id
-  network_security_group_id = var.network_security_group_id
-}
-
-resource "azurerm_virtual_machine" "vm" {
-  name                  = "${var.application_type}-vm"
-  location              = var.location
-  resource_group_name   = var.resource_group_name
-  network_interface_ids = [azurerm_network_interface.nic.id]
-  vm_size               = "Standard_B1s"
-
-  storage_image_reference {
-    id = var.image_id
+resource "azurerm_linux_virtual_machine" "" {
+  name                = ""
+  location            = ""
+  resource_group_name = ""
+  size                = ""
+  admin_username      = ""
+  network_interface_ids = []
+  admin_ssh_key {
+    username   = ""
+    public_key = file("~/.ssh/id_rsa.pub")
   }
-
-  storage_os_disk {
-    name              = "${var.application_type}-osdisk"
+  os_disk {
     caching           = "ReadWrite"
-    create_option     = "FromImage"
-    managed_disk_type = "Standard_LRS"
+    storage_account_type = "Standard_LRS"
   }
-
-  os_profile {
-    computer_name  = "${var.application_type}-vm"
-    admin_username = var.admin_username
-    admin_password = var.admin_password
-  }
-
-  os_profile_linux_config {
-    disable_password_authentication = false
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts"
+    version   = "latest"
   }
 }
