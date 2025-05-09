@@ -32,13 +32,15 @@ stages:
         provider: 'azurerm'
         command: 'init'
         workingDirectory: '$(projectRoot)/terraform'
-        ensureBackend: true
         backendServiceArm: '$(azureServiceConnectionId)'
-        backendAzureRmResourceGroupName: 'Azuredevops'
-        backendAzureRmStorageAccountName: 'tfstate1411330650'
-        backendAzureRmContainerName: 'tfstate'
-        backendAzureRmKey: 'test.terraform.tfstate'
-        
+        backendAzureRmConfig: |
+          resource_group_name=Azuredevops
+          storage_account_name=tfstate1411330650
+          container_name=tfstate
+          key=test.terraform.tfstate
+          use_msi=false
+          subscription_id=0fadec41-9b39-430f-aa5d-ce7b49f9346c
+          tenant_id=f958e84a-92b8-439f-a62d-4f45996b6d07
 
     # Terraform Validate
     - task: TerraformTaskV3@3
