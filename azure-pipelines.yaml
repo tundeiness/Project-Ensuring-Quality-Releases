@@ -6,13 +6,13 @@ trigger:
       - main
 
 pool:
-  name: myAgentPool
+  name: myAgentPool  # Or use `vmImage: ubuntu-latest` for Microsoft-hosted agent
 
 variables:
   python_version: '3.8.10'
   vm_ip: '128.251.185.59'
   vm_user: 'devopsagent'
-  ssh_key: 'id_rsa'  # Must be added to Secure Files in Azure DevOps
+  ssh_key: 'id_rsa.txt'  # File uploaded as Secure File
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
@@ -40,6 +40,7 @@ stages:
         backendAzureRmStorageAccountName: 'tfstate1331523174'
         backendAzureRmContainerName: 'tfstate'
         backendAzureRmKey: 'test.terraform.tfstate'
+        ensureBackend: true
 
     - task: TerraformTaskV3@3
       displayName: 'Terraform Validate'
@@ -63,3 +64,47 @@ stages:
         command: 'apply'
         workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
+- stage: DeployToVM
+  displayName: 'Deploy and Test on Custom VM'
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    displayName: 'SSH Deploy to Provisioned VM'
+    pool:
+      name: myAgentPool
+    steps:
+    - task: DownloadSecureFile@1
+      name: GetSSHKey
+      displayName: 'Download SSH Private Key'
+      inputs:
+        secureFile: 'id_rsa.txt'
+
+    - task: InstallSSHKey@0
+      displayName: 'Install SSH Key'
+      inputs:
+        sshPublicKey: ''  # Optional: only needed if strict host key checking is enforced
+        sshKeyPath: '$(Agent.TempDirectory)/id_rsa.txt'
+        passphrase: ''  # Leave empty unless you used one
+
+    - task: Bash@3
+      displayName: 'SCP and Deploy Web App to VM'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Copying app to VM..."
+          scp -o StrictHostKeyChecking=no webapp.zip $(vm_user)@$(vm_ip):/home/$(vm_user)/
+          ssh -o StrictHostKeyChecking=no $(vm_user)@$(vm_ip) << 'EOF'
+            unzip -o webapp.zip -d webapp
+            cd webapp
+            ./deploy.sh
+
+            echo "Running Newman tests..."
+            newman run tests/postman_collection.json
+
+            echo "Running Selenium tests..."
+            python3 tests/selenium_test.py
+
+            echo "Running JMeter tests..."
+            jmeter -n -t tests/perf_test.jmx -l results.jtl
+          EOF
