@@ -4,6 +4,7 @@ trigger:
   branches:
     include:
       - main
+pool: myAgentPool
 
 variables:
   python_version: '3.8.10'
@@ -17,53 +18,53 @@ variables:
 
 stages:
 - stage: Build
-  displayName: 'Build and Package Web App'
   jobs:
-  - job: Build
-    displayName: 'Archive Web App'
-    pool:
-      name: myAgentPool
+  - job: BuildInfrastructure
     steps:
-    - task: ArchiveFiles@2
-      displayName: 'Archive FakeRestAPI'
+    # Install Terraform on the pipeline agent 
+    - task: TerraformInstaller@0
+      displayName: 'Terrafom installation'
       inputs:
-        rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-
-    - task: PublishBuildArtifacts@1
-      displayName: 'Upload Package'
+        terraformVersion: '1.10.5'
+    
+    # Run Terraform Init on the pipeline agent 
+    # ToDo: Replace the resource group name, storage account name, and container name below
+    - task: TerraformTaskV3@3
+      displayName: 'Terrafom init'
       inputs:
-        PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-        ArtifactName: 'drop-fakerestapi'
-        publishLocation: 'Container'
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        backendServiceArm: '$(azureServiceConnectionId)'
+        backendAzureRmResourceGroupName: 'Azuredevops'
+        backendAzureRmStorageAccountName: 'tfstate1331523174'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'test.terraform.tfstate'
 
-- stage: Deploy
-  displayName: 'Deploy Web App'
-  dependsOn: Build
-  jobs:
-  - deployment: FakeRestAPI
-    displayName: 'Deploy to Azure Web App'
-    environment: 'TEST'
-    pool:
-      vmImage: 'ubuntu-latest'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: DownloadPipelineArtifact@2
-            displayName: 'Download Build Artifact'
-            inputs:
-              artifact: 'drop-fakerestapi'
-              path: '$(Pipeline.Workspace)'
+    # Run Terraform Validate    
+    - task: TerraformTaskV3@3
+      displayName: Terraform validate
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
 
-          - task: AzureWebApp@1
-            displayName: 'Deploy to Azure Web App'
-            inputs:
-              azureSubscription: 'ServiceConnex'
-              appName: 'myApplication-AppService'
-              appType: 'webApp'
-              package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+    
+    # Run Terraform Apply
+    # ToDo: Change the workingDirectory path, as applicable to you
+    - task: TerraformTaskV3@3
+      displayName: Terraform apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-
+    # Destroy the resources in Azure
+    # ToDo: Change the workingDirectory path, as applicable to you
+    - task: TerraformTaskV3@3
+      displayName: Terraform destroy
+      inputs:
+        provider: 'azurerm'
+        command: 'destroy'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'        
