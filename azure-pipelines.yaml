@@ -1,7 +1,9 @@
 name: azure-pipeline
 
 trigger:
-  - main
+  branches:
+    include:
+      - main
 
 pool:
   name: AgentPool
@@ -9,7 +11,7 @@ pool:
 variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: $(System.DefaultWorkingDirectory)
+  projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
 
 stages:
@@ -19,13 +21,11 @@ stages:
   - job: BuildInfrastructure
     displayName: 'Terraform Infrastructure'
     steps:
-    # Install Terraform
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
-        terraformVersion: '1.10.5'
+        terraformVersion: '1.0.5'
 
-    # Terraform Init using Azure Service Connection properly
     - task: TerraformTaskV3@3
       displayName: 'Terraform Init'
       inputs:
@@ -33,16 +33,12 @@ stages:
         command: 'init'
         workingDirectory: '$(projectRoot)/terraform'
         backendServiceArm: '$(azureServiceConnectionId)'
-        backendAzureRmConfig: |
-          resource_group_name=Azuredevops
-          storage_account_name=tfstate1411330650
-          container_name=tfstate
-          key=test.terraform.tfstate
-          use_msi=false
-          subscription_id=0fadec41-9b39-430f-aa5d-ce7b49f9346c
-          tenant_id=f958e84a-92b8-439f-a62d-4f45996b6d07
+        backendAzureRmResourceGroupName: 'Azuredevops'
+        backendAzureRmStorageAccountName: 'tfstate1411330650'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'test.terraform.tfstate'
+        ensureBackend: true
 
-    # Terraform Validate
     - task: TerraformTaskV3@3
       displayName: 'Terraform Validate'
       inputs:
@@ -50,7 +46,6 @@ stages:
         command: 'validate'
         workingDirectory: '$(projectRoot)/terraform'
 
-    # Terraform Plan
     - task: TerraformTaskV3@3
       displayName: 'Terraform Plan'
       inputs:
@@ -59,7 +54,6 @@ stages:
         workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-    # Terraform Apply
     - task: TerraformTaskV3@3
       displayName: 'Terraform Apply'
       inputs:
