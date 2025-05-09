@@ -10,6 +10,9 @@ pool:
 
 variables:
   python_version: '3.8.10'
+  vm_ip: '128.251.185.59'
+  vm_user: 'devopsagent'
+  ssh_key: 'id_rsa'  # Must be added to Secure Files in Azure DevOps
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
