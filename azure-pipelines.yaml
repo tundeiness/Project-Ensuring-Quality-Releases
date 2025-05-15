@@ -41,13 +41,14 @@ stages:
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate"
 
-    # ✅ Terraform Validate
+    # ✅ Terraform Plan (replacing Validate)
     - task: TerraformTaskV3@3
-      displayName: 'Terraform Validate'
+      displayName: 'Terraform Plan'
       inputs:
         provider: 'azurerm'
-        command: 'validate'
+        command: 'plan'
         workingDirectory: '$(projectRoot)'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
     # ✅ Terraform Apply
     - task: TerraformTaskV3@3
@@ -57,3 +58,4 @@ stages:
         command: 'apply'
         workingDirectory: '$(projectRoot)'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
