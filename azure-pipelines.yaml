@@ -22,11 +22,11 @@ stages:
     displayName: 'Terraform Provisioning'
     steps:
 
-    # ✅ Install Terraform on the pipeline agent
-    - task: TerraformInstaller@1
-      displayName: 'Terraform Installation'
+    # ✅ Install Terraform (working version)
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
       inputs:
-        terraformVersion: '1.10.5'
+        terraformVersion: '1.5.7'
 
     # ✅ Terraform Init
     - task: Bash@3
@@ -41,14 +41,14 @@ stages:
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate"
 
-    # ✅ Terraform Plan (replacing Validate)
-    - task: TerraformTaskV3@3
+    # ✅ Terraform Plan
+    - task: Bash@3
       displayName: 'Terraform Plan'
       inputs:
-        provider: 'azurerm'
-        command: 'plan'
-        workingDirectory: '$(projectRoot)'
-        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+        targetType: 'inline'
+        script: |
+          cd $(projectRoot)
+          terraform plan -detailed-exitcode
 
     # ✅ Terraform Apply
     - task: TerraformTaskV3@3
@@ -58,4 +58,5 @@ stages:
         command: 'apply'
         workingDirectory: '$(projectRoot)'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
 
