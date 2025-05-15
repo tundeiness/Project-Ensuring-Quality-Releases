@@ -51,7 +51,7 @@ stages:
           cd $(projectRoot)/terraform
           terraform init \
             -backend-config="resource_group_name=Azuredevops" \
-            -backend-config="storage_account_name=tfstate1331523174" \
+            -backend-config="storage_account_name=tfstate319964560" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate"
 
@@ -72,11 +72,4 @@ stages:
         workingDirectory: '$(projectRoot)/terraform'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
-    # Terraform Destroy (Optional cleanup step)
-    - task: TerraformTaskV3@3
-      displayName: 'Terraform Destroy'
-      inputs:
-        provider: 'azurerm'
-        command: 'destroy'
-        workingDirectory: '$(projectRoot)/terraform'
-        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+
