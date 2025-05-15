@@ -10,9 +10,6 @@ pool:
 
 variables:
   python_version: '3.8.10'
-  vm_ip: '128.251.185.59'
-  vm_user: 'devopsagent'
-  ssh_key: 'id_rsa.txt'  # File uploaded as Secure File
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
@@ -30,17 +27,6 @@ stages:
       displayName: 'Terraform Installation'
       inputs:
         terraformVersion: '1.10.5'
-
-    # Authenticate to Azure using Azure CLI
-    - task: AzureCLI@2
-      displayName: 'Azure Login'
-      inputs:
-        azureSubscription: '$(azureServiceConnectionId)'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          echo "Logged into Azure"
-          az account show
 
     # Terraform Init using Bash
     - task: Bash@3
