@@ -10,6 +10,7 @@ terraform {
     storage_account_name = "tfstate319964560"
     container_name       = "tfstate"
     key                  = "test.terraform.tfstate"
+
   }
 }
 module "resource_group" {
@@ -61,6 +62,7 @@ module "vm" {
   subnet_id             = module.network.subnet_id_test
   public_ip_address_id  = module.publicip.public_ip_address_id
   vm_name               = "myVm"
-  network_security_group_id = module.nsg.network_security_group_id
+  network_security_group_id = module.nsg-test.network_security_group_id
 
 }
+
