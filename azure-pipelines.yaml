@@ -11,7 +11,7 @@ pool:
 variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: '$(System.DefaultWorkingDirectory)'
+  projectRoot: '$(System.DefaultWorkingDirectory)/terraform/environment/test'
   environmentName: 'test'
 
 stages:
@@ -22,40 +22,38 @@ stages:
     displayName: 'Terraform Provisioning'
     steps:
 
-    # Install Terraform on the pipeline agent
-    - task: TerraformInstaller@0
+    # ✅ Install Terraform on the pipeline agent
+    - task: TerraformInstaller@1
       displayName: 'Terraform Installation'
       inputs:
         terraformVersion: '1.10.5'
 
-    # Terraform Init using Bash
+    # ✅ Terraform Init
     - task: Bash@3
       displayName: 'Terraform Init'
       inputs:
         targetType: 'inline'
         script: |
-          cd $(projectRoot)/terraform
+          cd $(projectRoot)
           terraform init \
             -backend-config="resource_group_name=Azuredevops" \
             -backend-config="storage_account_name=tfstate319964560" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate"
 
-    # Terraform Validate
+    # ✅ Terraform Validate
     - task: TerraformTaskV3@3
       displayName: 'Terraform Validate'
       inputs:
         provider: 'azurerm'
         command: 'validate'
-        workingDirectory: '$(projectRoot)/terraform/environment/test'
+        workingDirectory: '$(projectRoot)'
 
-    # Terraform Apply
+    # ✅ Terraform Apply
     - task: TerraformTaskV3@3
       displayName: 'Terraform Apply'
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(projectRoot)/terraform/environment/test'
+        workingDirectory: '$(projectRoot)'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
-
-
