@@ -14,9 +14,7 @@ variable "vm_size" {
   default = "Standard_B1s"
 }
 
-variable "vm_name" {
-  default = "test-vm"
-}
+variable "vm_name" {}
 
 variable "admin_ssh_key_path" {
   default = "/Users/tunde/Desktop/udrsa/.ssh/id_rsa.pub"
