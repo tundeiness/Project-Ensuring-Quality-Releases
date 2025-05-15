@@ -47,7 +47,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'validate'
-        workingDirectory: '$(projectRoot)/terraform'
+        workingDirectory: '$(projectRoot)/terraform/environment/test'
 
     # Terraform Apply
     - task: TerraformTaskV3@3
@@ -55,7 +55,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(projectRoot)/terraform'
+        workingDirectory: '$(projectRoot)/terraform/environment/test'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
 
