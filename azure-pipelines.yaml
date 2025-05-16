@@ -11,7 +11,7 @@ pool:
 variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: '$(System.DefaultWorkingDirectory)/terraform/environment/test'
+  projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
 
 stages:
@@ -34,7 +34,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          cd $(projectRoot)
+          cd $(projectRoot)/terraform/environment/test
           terraform init \
             -backend-config="resource_group_name=Azuredevops" \
             -backend-config="storage_account_name=tfstate319964560" \
@@ -56,7 +56,7 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(projectRoot)'
+        workingDirectory: '$(projectRoot)/terraform/environment/test'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
 
