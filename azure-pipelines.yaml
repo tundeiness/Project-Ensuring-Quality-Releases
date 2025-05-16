@@ -11,7 +11,7 @@ pool:
 variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: '$(System.DefaultWorkingDirectory)'
+  projectRoot: 'terraform/environment/test'
   environmentName: 'test'
 
 stages:
@@ -19,10 +19,10 @@ stages:
   displayName: 'Provision Infrastructure'
   jobs:
   - job: BuildInfrastructure
-    displayName: 'Terraform Provisioning'
+    displayName: 'Infrastructure Provisioning'
     steps:
 
-    # ✅ Install Terraform (working version)
+    # ✅ Install Terraform
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
@@ -34,7 +34,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          cd $(projectRoot)/terraform/environment/test
+          cd $(System.DefaultWorkingDirectory)/$(projectRoot)
           terraform init \
             -backend-config="resource_group_name=Azuredevops" \
             -backend-config="storage_account_name=tfstate319964560" \
@@ -47,7 +47,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          cd $(projectRoot)
+          cd $(System.DefaultWorkingDirectory)/$(projectRoot)
           terraform plan -detailed-exitcode
 
     # ✅ Terraform Apply
@@ -56,7 +56,5 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(projectRoot)/terraform/environment/test'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/$(projectRoot)'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
-
-
