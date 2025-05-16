@@ -21,14 +21,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
   network_interface_ids = [
     azurerm_network_interface.vm_nic.id
   ]
+
   admin_ssh_key {
-    username   = "azureuser"
-    public_key = file("/Users/tunde/Desktop/udrsa/.ssh/id_rsa.pub")
+    username   = var.admin_username
+    public_key = file(var.admin_ssh_key_path)
   }
+
   os_disk {
-    caching           = "ReadWrite"
+    caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
+
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-focal"
