@@ -27,52 +27,33 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                #! /bin/bash
+                echo "Installing Postman & Newman"
                 pwd
 
-          # Needed for Terraform VM deployment
           - task: InstallSSHKey@0
             inputs:
-              sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
+              sshPublicKey: 'ssh-rsa AAAA...'
               sshKeySecureFile: 'id_rsa'
-              knownHostsEntry: '20.4.59.156 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
+              knownHostsEntry: '20.4.59.156 ssh-rsa AAAA...'
 
-          # - task: Bash@3
-          #   displayName: 'SSH into VM and run tests'
-          #   inputs:
-          #     targetType: 'inline'
-          #     script: |
-          #       echo "$(ssh_private_key)" > ~/.ssh/id_rsa
-          #       chmod 600 ~/.ssh/id_rsa
-
-          #       # Disable host key checking for automation
-          #       echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
-
-          #       # SSH into VM and run your test script
-          #       ssh azureuser@<vm-public-ip> "bash ~/run_all_tests.sh"
-          #   env:
-          #     ssh_private_key: $(ssh_private_key)
-
-          # ✅ Install Terraform
           - task: TerraformInstaller@0
             displayName: 'Install Terraform'
             inputs:
               terraformVersion: '1.5.7'
 
-          # ✅ Terraform Init
-          - task: Bash@3
+          # ✅ Use the official Terraform Init task with service connection
+          - task: TerraformTaskV3@3
             displayName: 'Terraform Init'
             inputs:
-              targetType: 'inline'
-              script: |
-                cd $(projectRoot)/terraform/environments/test
-                terraform init \
-                  -backend-config="resource_group_name=Azuredevops" \
-                  -backend-config="storage_account_name=tfstate1439615717" \
-                  -backend-config="container_name=tfstate" \
-                  -backend-config="key=test.terraform.tfstate"
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(projectRoot)/terraform/environments/test'
+              backendServiceArm: '$(azureServiceConnectionId)'
+              backendAzureRmResourceGroupName: 'Azuredevops'
+              backendAzureRmStorageAccountName: 'tfstate1439615717'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'test.terraform.tfstate'
 
-          # ✅ Terraform Plan
           - task: Bash@3
             displayName: 'Terraform Plan'
             inputs:
@@ -81,7 +62,6 @@ stages:
                 cd $(projectRoot)/terraform/environments/test
                 terraform plan -detailed-exitcode
 
-          # ✅ Terraform Apply
           - task: TerraformTaskV3@3
             displayName: 'Terraform Apply'
             inputs:
