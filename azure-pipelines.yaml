@@ -40,18 +40,28 @@ stages:
             inputs:
               terraformVersion: '1.5.7'
 
+          # ✅ Export Azure SP creds into environment for Terraform auth
+          - task: Bash@3
+            displayName: 'Export ARM_* Env Vars'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Exporting ARM credentials..."
+                echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$(ARM_CLIENT_ID)"
+                echo "##vso[task.setvariable variable=ARM_CLIENT_SECRET]$(ARM_CLIENT_SECRET)"
+                echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID]$(ARM_SUBSCRIPTION_ID)"
+                echo "##vso[task.setvariable variable=ARM_TENANT_ID]$(ARM_TENANT_ID)"
+
           - task: TerraformTaskV3@3
             displayName: 'Terraform Init'
             inputs:
               provider: 'azurerm'
               command: 'init'
               workingDirectory: '$(projectRoot)/terraform/environments/test'
-              backendServiceArm: '$(azureServiceConnectionId)'
               backendAzureRmResourceGroupName: 'Azuredevops'
               backendAzureRmStorageAccountName: 'tfstate1439615717'
               backendAzureRmContainerName: 'tfstate'
               backendAzureRmKey: 'test.terraform.tfstate'
-
 
           - task: TerraformTaskV3@3
             displayName: 'Terraform Plan'
@@ -59,7 +69,6 @@ stages:
               provider: 'azurerm'
               command: 'plan'
               workingDirectory: '$(projectRoot)/terraform/environments/test'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
           - task: TerraformTaskV3@3
             displayName: 'Terraform Apply'
@@ -67,4 +76,3 @@ stages:
               provider: 'azurerm'
               command: 'apply'
               workingDirectory: '$(projectRoot)/terraform/environments/test'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
