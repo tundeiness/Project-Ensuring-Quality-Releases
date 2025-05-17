@@ -24,7 +24,7 @@ variable "public_ip_address_id" {
 
 variable "admin_username" {
   type    = string
-  default = "azureuser"
+  default = "adminuser"
 }
 
 variable "vm_size" {
@@ -44,3 +44,5 @@ variable "admin_ssh_key_path" {
 variable "network_security_group_id" {
   type = string
 }
+
+
