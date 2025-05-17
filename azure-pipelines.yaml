@@ -65,7 +65,7 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                cd $(projectRoot)
+                cd $(projectRoot)/environments/test/
                 terraform init \
                   -backend-config="resource_group_name=Azuredevops" \
                   -backend-config="storage_account_name=tfstate1439615717" \
@@ -78,7 +78,7 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                cd $(projectRoot)
+                cd $(projectRoot)/environments/test/
                 terraform plan -detailed-exitcode
 
           # ✅ Terraform Apply
@@ -87,5 +87,5 @@ stages:
             inputs:
               provider: 'azurerm'
               command: 'apply'
-              workingDirectory: '$(projectRoot)'
+              workingDirectory: '$(projectRoot)/environments/test/'
               environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
