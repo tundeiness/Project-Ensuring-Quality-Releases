@@ -12,7 +12,7 @@ variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
-  environmentName: 'test'
+  environmentName: 'myAgentVM'
 
 stages:
   - stage: Build
@@ -30,6 +30,7 @@ stages:
                 pwd
 
           - task: InstallSSHKey@0
+            displayName: 'Install SSH Key'
             inputs:
               sshPublicKey: 'ssh-rsa AAAA...'
               sshKeySecureFile: 'id_rsa'
@@ -40,7 +41,6 @@ stages:
             inputs:
               terraformVersion: '1.5.7'
 
-          # ✅ Export Azure SP creds into environment for Terraform auth
           - task: Bash@3
             displayName: 'Export ARM_* Env Vars'
             inputs:
