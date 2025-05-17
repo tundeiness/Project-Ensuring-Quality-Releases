@@ -51,6 +51,7 @@ stages:
               backendAzureRmStorageAccountName: 'tfstate1439615717'
               backendAzureRmContainerName: 'tfstate'
               backendAzureRmKey: 'test.terraform.tfstate'
+              commandOptions: -reconfigure
 
           - task: TerraformTaskV3@3
             displayName: 'Terraform Plan'
