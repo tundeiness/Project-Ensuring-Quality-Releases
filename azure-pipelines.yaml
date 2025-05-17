@@ -21,7 +21,6 @@ stages:
       - job: BuildInfrastructure
         displayName: 'Infrastructure Provisioning'
         steps:
-
           - task: Bash@3
             displayName: 'Install Postman & Newman'
             inputs:
@@ -41,7 +40,6 @@ stages:
             inputs:
               terraformVersion: '1.5.7'
 
-          # ✅ Use the official Terraform Init task with service connection
           - task: TerraformTaskV3@3
             displayName: 'Terraform Init'
             inputs:
