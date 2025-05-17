@@ -52,13 +52,13 @@ stages:
               backendAzureRmContainerName: 'tfstate'
               backendAzureRmKey: 'test.terraform.tfstate'
 
-          - task: Bash@3
+          - task: TerraformTaskV3@3
             displayName: 'Terraform Plan'
             inputs:
-              targetType: 'inline'
-              script: |
-                cd $(projectRoot)/terraform/environments/test
-                terraform plan -detailed-exitcode
+              provider: 'azurerm'
+              command: 'plan'
+              workingDirectory: '$(projectRoot)/terraform/environments/test'
+              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
 
           - task: TerraformTaskV3@3
             displayName: 'Terraform Apply'
