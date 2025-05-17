@@ -38,7 +38,7 @@ variable "vm_name" {
 
 variable "admin_ssh_key_path" {
   type    = string
-  default = "~/.ssh/id_rsa.pub" # more portable than hardcoded path
+  default = "/Users/tunde/Desktop/udrsa/.ssh/id_rsa.pub" 
 }
 
 variable "network_security_group_id" {
