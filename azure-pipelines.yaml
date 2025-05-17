@@ -11,16 +11,31 @@ pool:
 variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: 'terraform/environment/test'
+  projectRoot: '$(System.DefaultWorkingDirectory)'
   environmentName: 'test'
 
 stages:
 - stage: Build
-  displayName: 'Provision Infrastructure'
+  displayName: 'Infrastructure'
   jobs:
   - job: BuildInfrastructure
     displayName: 'Infrastructure Provisioning'
     steps:
+
+    - task: Bash@3
+      displayName: 'Install Postman & Newman'
+      inputs:
+        targetType: 'inline'
+        script: |
+          #! /bin/bash
+          pwd
+
+    # Needed for Terraform VM deployment
+    - task: InstallSSHKey@0
+      inputs:
+        sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
+        sshKeySecureFile: 'id_rsa'
+        knownHostsEntry: '20.4.59.156 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
 
     # ✅ Install Terraform
     - task: TerraformInstaller@0
@@ -34,10 +49,10 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          cd $(System.DefaultWorkingDirectory)/$(projectRoot)
+          cd $(projectRoot)
           terraform init \
             -backend-config="resource_group_name=Azuredevops" \
-            -backend-config="storage_account_name=tfstate319964560" \
+            -backend-config="storage_account_name=tfstate1439615717" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate"
 
@@ -47,7 +62,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          cd $(System.DefaultWorkingDirectory)/$(projectRoot)
+          cd $(projectRoot)
           terraform plan -detailed-exitcode
 
     # ✅ Terraform Apply
@@ -56,5 +71,5 @@ stages:
       inputs:
         provider: 'azurerm'
         command: 'apply'
-        workingDirectory: '$(System.DefaultWorkingDirectory)/$(projectRoot)'
+        workingDirectory: '$(projectRoot)'
         environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
