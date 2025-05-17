@@ -12,11 +12,12 @@ variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
-  environmentName: 'test'
+  environmentName: myAgentVM
 
 stages:
   - stage: Build
     displayName: 'Infrastructure'
+
     jobs:
       - job: BuildInfrastructure
         displayName: 'Infrastructure Provisioning'
@@ -40,31 +41,51 @@ stages:
             inputs:
               terraformVersion: '1.5.7'
 
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Init'
+          - task: Bash@3
+            displayName: 'Terraform Init (manual)'
             inputs:
-              provider: 'azurerm'
-              command: 'init'
-              workingDirectory: '$(projectRoot)/terraform/environments/test'
-              backendServiceArm: '$(azureServiceConnectionId)'
-              backendAzureRmResourceGroupName: 'Azuredevops'
-              backendAzureRmStorageAccountName: 'tfstate1439615717'
-              backendAzureRmContainerName: 'tfstate'
-              backendAzureRmKey: 'test.terraform.tfstate'
-              commandOptions: -reconfigure
+              targetType: 'inline'
+              script: |
+                echo "Running Terraform Init"
+                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
+                export ARM_TENANT_ID=$(ARM_TENANT_ID)
 
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Plan'
-            inputs:
-              provider: 'azurerm'
-              command: 'plan'
-              workingDirectory: '$(projectRoot)/terraform/environments/test'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+                cd $(projectRoot)/terraform/environments/test
 
-          - task: TerraformTaskV3@3
-            displayName: 'Terraform Apply'
+                terraform init \
+                  -backend-config="storage_account_name=tfstate1439615717" \
+                  -backend-config="container_name=tfstate" \
+                  -backend-config="key=test.terraform.tfstate" \
+                  -backend-config="resource_group_name=Azuredevops" \
+                  -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+                  -backend-config="tenant_id=$ARM_TENANT_ID"
+
+          - task: Bash@3
+            displayName: 'Terraform Plan (manual)'
             inputs:
-              provider: 'azurerm'
-              command: 'apply'
-              workingDirectory: '$(projectRoot)/terraform/environments/test'
-              environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+              targetType: 'inline'
+              script: |
+                echo "Running Terraform Plan"
+                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
+                export ARM_TENANT_ID=$(ARM_TENANT_ID)
+
+                cd $(projectRoot)/terraform/environments/test
+                terraform plan
+
+          - task: Bash@3
+            displayName: 'Terraform Apply (manual)'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Running Terraform Apply"
+                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
+                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
+                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
+                export ARM_TENANT_ID=$(ARM_TENANT_ID)
+
+                cd $(projectRoot)/terraform/environments/test
+                terraform apply -auto-approve
