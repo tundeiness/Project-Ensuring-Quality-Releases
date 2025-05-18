@@ -39,7 +39,7 @@ stages:
             inputs:
               sshPublicKey: 'ssh-rsa AAAA...'
               sshKeySecureFile: 'id_rsa'
-              knownHostsEntry: '20.4.59.156 ssh-rsa AAAA...'
+              knownHostsEntry: '172.202.200.6 ssh-rsa AAAA...'
 
           - task: TerraformInstaller@0
             displayName: 'Install Terraform'
