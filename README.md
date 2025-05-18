@@ -1,3 +1,6 @@
+[![Build Status](https://dev.azure.com/odluser281067/project-demo/_apis/build/status%2Ftundeiness.Project-Ensuring-Quality-Releases?branchName=main)](https://dev.azure.com/odluser281067/project-demo/_build/latest?definitionId=1&branchName=main)
+
+
 # Project Starter
 This repository contains the starter code for the **Ensuring Quality Releases** project of the cd1807 Ensuring Quality Releases (Quality Assurance) course taught by Nathan Anderson. 
 
