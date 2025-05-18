@@ -17,80 +17,78 @@ variables:
     value: 'ServiceConnex'
   - name: projectRoot
     value: '$(System.DefaultWorkingDirectory)'
-  # - name: environmentName
-  #   value: myAgentVM
+  - name: environmentName
+    value: 'test'
+
 
 stages:
-  - stage: Build
-    displayName: 'Infrastructure'
-    jobs:
-      - job: BuildInfrastructure
-        displayName: 'Infrastructure Provisioning'
-        steps:
-          - task: Bash@3
-            displayName: 'Install Postman & Newman'
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Installing Postman & Newman"
-                pwd
+# ---------------------- BUILD STAGE ----------------------
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+    - job: BuildInfrastructure
+      displayName: 'Prepare Infrastructure'
+      steps:
+        # ✅ Install Postman & Newman
+        - task: Bash@3
+          displayName: 'Install Postman & Newman'
+          inputs:
+            targetType: 'inline'
+            script: |
+              #! /bin/bash
+              echo "Installing Postman & Newman"
+              pwd
 
-          - task: InstallSSHKey@0
-            inputs:
-              sshPublicKey: 'ssh-rsa AAAA...'
-              sshKeySecureFile: 'id_rsa'
-              knownHostsEntry: '172.202.200.6 ssh-rsa AAAA...'
+        # ✅ Install SSH Key
+        - task: InstallSSHKey@0
+          inputs:
+            sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
+            sshKeySecureFile: 'id_rsa'
+            knownHostsEntry: '52.183.198.36 ssh-rsa AAAAB3Nza...'
 
-          - task: TerraformInstaller@0
-            displayName: 'Install Terraform'
-            inputs:
-              terraformVersion: '1.5.7'
+        # ✅ Install Terraform
+        - task: TerraformInstaller@0
+          displayName: 'Install Terraform'
+          inputs:
+            terraformVersion: '1.5.7'
 
-          - task: Bash@3
-            displayName: 'Terraform Init (manual)'
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Running Terraform Init"
-                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-                export ARM_TENANT_ID=$(ARM_TENANT_ID)
+# ---------------------- DEPLOY STAGE ----------------------
+- stage: Deploy
+  displayName: 'Deploy Infrastructure'
+  dependsOn: Build
+  jobs:
+    - job: DeployInfrastructure
+      displayName: 'Terraform Actions'
+      steps:
+        # ✅ Terraform Init
+        - task: Bash@3
+          displayName: 'Terraform Init'
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "Running Terraform Init"
+              cd $(projectRoot)/terraform/environments/$(environmentName)
+              terraform init \
+                -backend-config="resource_group_name=Azuredevops" \
+                -backend-config="storage_account_name=tfstate319964560" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=test.terraform.tfstate"
 
-                cd $(projectRoot)/terraform/environments/test
+        # ✅ Terraform Plan
+        - task: Bash@3
+          displayName: 'Terraform Plan'
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "Running Terraform Plan"
+              cd $(projectRoot)/terraform/environments/$(environmentName)
+              terraform plan -detailed-exitcode
 
-                terraform init \
-                  -backend-config="storage_account_name=tfstated7c7e6320bea" \
-                  -backend-config="container_name=tfstate" \
-                  -backend-config="key=test.terraform.tfstate" \
-                  -backend-config="resource_group_name=Azuredevops" \
-                  -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-                  -backend-config="tenant_id=$ARM_TENANT_ID"
-
-          - task: Bash@3
-            displayName: 'Terraform Plan (manual)'
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Running Terraform Plan"
-                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-                export ARM_TENANT_ID=$(ARM_TENANT_ID)
-
-                cd $(projectRoot)/terraform/environments/test
-                terraform plan
-
-          - task: Bash@3
-            displayName: 'Terraform Apply (manual)'
-            inputs:
-              targetType: 'inline'
-              script: |
-                echo "Running Terraform Apply"
-                export ARM_CLIENT_ID=$(ARM_CLIENT_ID)
-                export ARM_CLIENT_SECRET=$(ARM_CLIENT_SECRET)
-                export ARM_SUBSCRIPTION_ID=$(ARM_SUBSCRIPTION_ID)
-                export ARM_TENANT_ID=$(ARM_TENANT_ID)
-
-                cd $(projectRoot)/terraform/environments/test
-                terraform apply -auto-approve
+        # ✅ Terraform Apply
+        - task: TerraformTaskV3@3
+          displayName: 'Terraform Apply'
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            workingDirectory: '$(projectRoot)/terraform/environments/$(environmentName)'
+            environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
