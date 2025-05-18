@@ -16,79 +16,78 @@ variables:
   - name: azureServiceConnectionId
     value: 'ServiceConnex'
   - name: projectRoot
-    value: '$(System.DefaultWorkingDirectory)'
+    value: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
   - name: environmentName
     value: 'test'
 
-
 stages:
-# ---------------------- BUILD STAGE ----------------------
 - stage: Build
-  displayName: 'Build Stage'
+  displayName: 'Provision Infrastructure'
   jobs:
-    - job: BuildInfrastructure
-      displayName: 'Prepare Infrastructure'
-      steps:
-        # ✅ Install Postman & Newman
-        - task: Bash@3
-          displayName: 'Install Postman & Newman'
-          inputs:
-            targetType: 'inline'
-            script: |
-              #! /bin/bash
-              echo "Installing Postman & Newman"
-              pwd
+  - job: BuildInfrastructure
+    displayName: 'Build Infrastructure'
+    steps:
+    - task: Bash@3
+      displayName: 'Install Postman & Newman'
+      inputs:
+        targetType: 'inline'
+        script: |
+          #!/bin/bash
+          echo "Installing Postman & Newman"
+          pwd
 
-        # ✅ Install SSH Key
-        - task: InstallSSHKey@0
-          inputs:
-            sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
-            sshKeySecureFile: 'id_rsa'
-            knownHostsEntry: '52.183.198.36 ssh-rsa AAAAB3Nza...'
+    - task: InstallSSHKey@0
+      displayName: 'Install SSH Key'
+      inputs:
+        sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC...'
+        sshKeySecureFile: 'id_rsa'
+        knownHostsEntry: '52.183.198.36 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC...'
 
-        # ✅ Install Terraform
-        - task: TerraformInstaller@0
-          displayName: 'Install Terraform'
-          inputs:
-            terraformVersion: '1.5.7'
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.5.7'
 
-# ---------------------- DEPLOY STAGE ----------------------
+    - task: Bash@3
+      displayName: 'Terraform Init'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Running Terraform Init"
+          terraform version
+          cd $(projectRoot)
+          terraform init \
+            -backend-config="resource_group_name=Azuredevops" \
+            -backend-config="storage_account_name=tfstate319964560" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=test.terraform.tfstate"
+
+    - task: Bash@3
+      displayName: 'Terraform Plan'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "Running Terraform Plan"
+          cd $(projectRoot)
+          terraform plan -detailed-exitcode
+
 - stage: Deploy
-  displayName: 'Deploy Infrastructure'
+  displayName: 'Apply Infrastructure'
   dependsOn: Build
+  condition: succeeded()
   jobs:
-    - job: DeployInfrastructure
-      displayName: 'Terraform Actions'
-      steps:
-        # ✅ Terraform Init
-        - task: Bash@3
-          displayName: 'Terraform Init'
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "Running Terraform Init"
-              cd $(projectRoot)/terraform/environments/$(environmentName)
-              terraform init \
-                -backend-config="resource_group_name=Azuredevops" \
-                -backend-config="storage_account_name=tfstate319964560" \
-                -backend-config="container_name=tfstate" \
-                -backend-config="key=test.terraform.tfstate"
+  - job: DeployInfrastructure
+    displayName: 'Deploy Infrastructure'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.5.7'
 
-        # ✅ Terraform Plan
-        - task: Bash@3
-          displayName: 'Terraform Plan'
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "Running Terraform Plan"
-              cd $(projectRoot)/terraform/environments/$(environmentName)
-              terraform plan -detailed-exitcode
-
-        # ✅ Terraform Apply
-        - task: TerraformTaskV3@3
-          displayName: 'Terraform Apply'
-          inputs:
-            provider: 'azurerm'
-            command: 'apply'
-            workingDirectory: '$(projectRoot)/terraform/environments/$(environmentName)'
-            environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+    - task: TerraformTaskV3@3
+      displayName: 'Terraform Apply'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(projectRoot)'
+        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
