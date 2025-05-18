@@ -11,6 +11,7 @@ pool:
 variables:
   - group: azure-credentials   # contains ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_SUBSCRIPTION_ID, ARM_TENANT_ID
   - group: azure-storage-key
+  - group: vm-ssh-key          # ⬅️ Contains ADMIN_SSH_PUBLIC_KEY
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
@@ -19,7 +20,7 @@ variables:
     value: '$(System.DefaultWorkingDirectory)'
   - name: environmentName
     value: 'test'
-  - name: vmImageName  # azure deployment vm image name
+  - name: vmImageName
     value: 'demoVM'
 
 stages:
@@ -42,21 +43,21 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          #! /bin/bash
-          pwd
-          # Here add your install commands if needed, e.g.
-          # npm install -g newman
-
-    - task: InstallSSHKey@0
-      inputs:
-        sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
-        sshKeySecureFile: 'id_rsa'
-        knownHostsEntry: '98.71.165.140 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
+          # Optional: Install tools
+          echo "Installing Postman dependencies..."
 
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
           terraformVersion: '1.5.7'
+
+    - task: Bash@3
+      displayName: 'Write SSH Public Key to id_rsa.pub'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo "$ADMIN_SSH_PUBLIC_KEY" > $(projectRoot)/terraform/environments/test/id_rsa.pub
+          chmod 644 $(projectRoot)/terraform/environments/test/id_rsa.pub
 
     - task: Bash@3
       displayName: 'Terraform Init'
@@ -77,19 +78,6 @@ stages:
             -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
             -backend-config="tenant_id=$ARM_TENANT_ID"
 
-    # - task: Bash@3
-    #   displayName: 'Terraform Plan'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd $(projectRoot)/terraform/environments/test
-    #       terraform plan
-
     - task: Bash@3
       displayName: 'Create terraform.tfvars'
       env:
@@ -107,23 +95,24 @@ stages:
           client_id       = "$ARM_CLIENT_ID"
           client_secret   = "$ARM_CLIENT_SECRET"
           tenant_id       = "$ARM_TENANT_ID"
-          
+
           # Resource Group/Location
           location         = "West Europe"
           resource_group   = "Azuredevops"
           application_type = "myWebApp"
-          
+
           # Network
           virtual_network_name  = "devopsnet"
           address_space         = ["10.5.0.0/16"]
           address_prefix_test   = "10.5.1.0/24"
-          
+
           # VM
-          vm_name = "$(vmImageName)"
+          vm_name     = "$(vmImageName)"
+          admin_ssh_key = "$ADMIN_SSH_PUBLIC_KEY"
           EOF
-          
-          echo "terraform.tfvars file created:"
-          ls -la
+
+          echo "terraform.tfvars created:"
+          cat terraform.tfvars
 
     - task: Bash@3
       displayName: 'Terraform Apply'
