@@ -9,12 +9,16 @@ pool:
   name: myAgentPool
 
 variables:
-  python_version: '3.8.10'
-  azureServiceConnectionId: 'ServiceConnex'
-  projectRoot: '$(System.DefaultWorkingDirectory)'
-  # environmentName: myAgentVM
   - group: azure-credentials
   - group: azure-storage-key
+  - name: python_version
+    value: '3.8.10'
+  - name: azureServiceConnectionId
+    value: 'ServiceConnex'
+  - name: projectRoot
+    value: '$(System.DefaultWorkingDirectory)'
+  # - name: environmentName
+  #   value: myAgentVM
 
 stages:
   - stage: Build
