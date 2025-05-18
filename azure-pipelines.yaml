@@ -60,7 +60,7 @@ stages:
                 cd $(projectRoot)/terraform/environments/test
 
                 terraform init \
-                  -backend-config="storage_account_name=tfstate1439615717" \
+                  -backend-config="storage_account_name=tfstated7c7e6320bea" \
                   -backend-config="container_name=tfstate" \
                   -backend-config="key=test.terraform.tfstate" \
                   -backend-config="resource_group_name=Azuredevops" \
