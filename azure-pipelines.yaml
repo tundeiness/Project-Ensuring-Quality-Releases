@@ -19,6 +19,8 @@ variables:
     value: '$(System.DefaultWorkingDirectory)'
   - name: environmentName
     value: 'test'
+  - name: vmImageName  # azure deployment vm image name
+    value: 'demoVM'
 
 stages:
 - stage: Build
@@ -51,10 +53,10 @@ stages:
         sshKeySecureFile: 'id_rsa'
         knownHostsEntry: '172.202.200.6 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
 
-    - task: TerraformInstaller@0
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-installer-task.TerraformInstaller@0
       displayName: 'Install Terraform'
       inputs:
-        terraformVersion: '1.5.7'
+        terraformVersion: $(terraformVersion)
 
     - task: Bash@3
       displayName: 'Terraform Init'

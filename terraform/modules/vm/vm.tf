@@ -1,5 +1,5 @@
 resource "azurerm_network_interface" "vm_nic" {
-  name                = "${var.application_type}-${var.resource_type}-nic"
+  name                = "myAzurenic"
   location            = var.location
   resource_group_name = var.resource_group
 
