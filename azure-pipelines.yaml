@@ -103,12 +103,3 @@ stages:
           cd $(projectRoot)/terraform/environments/test
           terraform apply -auto-approve
 
-- stage: Deploy
-  displayName: 'Deploy Application'
-  dependsOn: Build
-  jobs:
-  - job: DeployJob
-    displayName: 'Deploy Job'
-    steps:
-      - script: echo "Add deployment steps here"
-        displayName: 'Placeholder Deploy Step'
