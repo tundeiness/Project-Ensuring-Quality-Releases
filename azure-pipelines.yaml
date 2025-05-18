@@ -12,14 +12,13 @@ variables:
   python_version: '3.8.10'
   azureServiceConnectionId: 'ServiceConnex'
   projectRoot: '$(System.DefaultWorkingDirectory)'
-  environmentName: myAgentVM
+  # environmentName: myAgentVM
   - group: azure-credentials
   - group: azure-storage-key
 
 stages:
   - stage: Build
     displayName: 'Infrastructure'
-
     jobs:
       - job: BuildInfrastructure
         displayName: 'Infrastructure Provisioning'
