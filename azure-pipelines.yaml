@@ -79,14 +79,6 @@ stages:
             -backend-config="tenant_id=$ARM_TENANT_ID"
 
     - task: Bash@3
-      displayName: 'Import existing VM into Terraform state'
-      inputs:
-        targetType: 'inline'
-        script: |
-          cd $(projectRoot)/terraform/environments/test
-          terraform import 'module.vm.azurerm_linux_virtual_machine.vm' '/subscriptions/44ada2e4-89f9-41cc-8efc-3cf76cd05c0c/resourceGroups/Azuredevops/providers/Microsoft.Compute/virtualMachines/demoVM'
-
-    - task: Bash@3
       displayName: 'Create terraform.tfvars'
       env:
         ARM_CLIENT_ID: $(ARM_CLIENT_ID)
