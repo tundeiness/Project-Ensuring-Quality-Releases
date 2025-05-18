@@ -9,14 +9,14 @@ pool:
   name: myAgentPool
 
 variables:
-  - group: azure-credentials
+  - group: azure-credentials   # contains ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_SUBSCRIPTION_ID, ARM_TENANT_ID
   - group: azure-storage-key
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
     value: 'ServiceConnex'
   - name: projectRoot
-    value: '$(System.DefaultWorkingDirectory)/terraform/environments/test'
+    value: '$(System.DefaultWorkingDirectory)'
   - name: environmentName
     value: 'test'
 
@@ -25,23 +25,31 @@ stages:
   displayName: 'Provision Infrastructure'
   jobs:
   - job: BuildInfrastructure
-    displayName: 'Build Infrastructure'
+    displayName: 'Infrastructure Provisioning'
     steps:
+
+    - task: Bash@3
+      displayName: 'Install Azure CLI'
+      inputs:
+        targetType: 'inline'
+        script: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
     - task: Bash@3
       displayName: 'Install Postman & Newman'
       inputs:
         targetType: 'inline'
         script: |
-          #!/bin/bash
-          echo "Installing Postman & Newman"
+          #! /bin/bash
           pwd
+          # Here add your install commands if needed, e.g.
+          # npm install -g newman
 
     - task: InstallSSHKey@0
-      displayName: 'Install SSH Key'
       inputs:
-        sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC...'
+        sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
         sshKeySecureFile: 'id_rsa'
-        knownHostsEntry: '52.183.198.36 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC...'
+        knownHostsEntry: '172.202.200.6 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5l7ZCGgzQ5dTBEfCLmIGY4eCQs0G9xviTB6rIq+dBbR3SFgJ/VrKYSB1EZ3LEV/1qEyrRuENWDEvjKCedrVFxUAnb2RQcCwmDuQDo1nQlXx0z+e8UxlxFgpjTFlumfbO3ltCfNSdouR8p6Ug9HBD0utRgKKcr5bty8OtoR11mfr1gCQYtZW2qpHYbVYgK46BdFqMAkzyKgMFDmC1wULsM9VgmlBxEuhrijUM175XGky5+F16aw9eazCo+qoeiBb+apGDrMPIKL7ePiJ3kI2CohmzLI4Npsu1jn+i/ZzMMipWaSPfau5MCWzssRAtCSjjFfjK27+6BsK1CUeuGLHPZ+xyslcUlrx0kXizDuwGLmO+HG78Ho0F6uyoo/cfjyCcATDmX4VtvIInP2vO8r2wLp8GBebJAKqqme0LKVF5z7957x7e09yfazUr8yOPWauEQjrRi1UsD8NmngKo8npj+ROhFvyoDsoyqaGKV3lPUGnDPmKJaHsOc/9OjgL3j5R0= tunde@MacBookPro.lan'
 
     - task: TerraformInstaller@0
       displayName: 'Install Terraform'
@@ -50,44 +58,55 @@ stages:
 
     - task: Bash@3
       displayName: 'Terraform Init'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       inputs:
         targetType: 'inline'
         script: |
-          echo "Running Terraform Init"
-          terraform version
-          cd $(projectRoot)
+          cd $(projectRoot)/terraform/environments/test
           terraform init \
-            -backend-config="resource_group_name=Azuredevops" \
-            -backend-config="storage_account_name=tfstate319964560" \
+            -backend-config="storage_account_name=tfstated7c7e6320bea" \
             -backend-config="container_name=tfstate" \
-            -backend-config="key=test.terraform.tfstate"
+            -backend-config="key=test.terraform.tfstate" \
+            -backend-config="resource_group_name=Azuredevops" \
+            -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+            -backend-config="tenant_id=$ARM_TENANT_ID"
 
     - task: Bash@3
       displayName: 'Terraform Plan'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       inputs:
         targetType: 'inline'
         script: |
-          echo "Running Terraform Plan"
-          cd $(projectRoot)
-          terraform plan -detailed-exitcode
+          cd $(projectRoot)/terraform/environments/test
+          terraform plan
+
+    - task: Bash@3
+      displayName: 'Terraform Apply'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(projectRoot)/terraform/environments/test
+          terraform apply -auto-approve
 
 - stage: Deploy
-  displayName: 'Apply Infrastructure'
+  displayName: 'Deploy Application'
   dependsOn: Build
-  condition: succeeded()
   jobs:
-  - job: DeployInfrastructure
-    displayName: 'Deploy Infrastructure'
+  - job: DeployJob
+    displayName: 'Deploy Job'
     steps:
-    - task: TerraformInstaller@0
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: '1.5.7'
-
-    - task: TerraformTaskV3@3
-      displayName: 'Terraform Apply'
-      inputs:
-        provider: 'azurerm'
-        command: 'apply'
-        workingDirectory: '$(projectRoot)'
-        environmentServiceNameAzureRM: '$(azureServiceConnectionId)'
+      - script: echo "Add deployment steps here"
+        displayName: 'Placeholder Deploy Step'
