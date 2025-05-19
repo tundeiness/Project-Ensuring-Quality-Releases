@@ -9,9 +9,9 @@ pool:
   name: myAgentPool
 
 variables:
-  - group: azure-credentials       # ARM_CLIENT_ID, ARM_CLIENT_SECRET, etc.
+  - group: azure-credentials
   - group: azure-storage-key
-  - group: vm-ssh-key              # ADMIN_SSH_PUBLIC_KEY
+  - group: vm-ssh-key
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
@@ -30,85 +30,6 @@ stages:
   - job: BuildInfrastructure
     displayName: 'Infrastructure Provisioning'
     steps:
-    # - task: Bash@3
-    #   displayName: 'Install Postman & Newman'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       echo "Installing Postman dependencies..."
-
-    # Uncomment below tasks if needed
-    # - task: TerraformInstaller@0
-    #   displayName: 'Install Terraform'
-    #   inputs:
-    #     terraformVersion: '1.5.7'
-
-    # - task: Bash@3
-    #   displayName: 'Write SSH Public Key'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       echo "$(ADMIN_SSH_PUBLIC_KEY)" > "$(projectRoot)/terraform/environments/test/id_rsa.pub"
-    #       chmod 644 "$(projectRoot)/terraform/environments/test/id_rsa.pub"
-
-    # - task: Bash@3
-    #   displayName: 'Terraform Init'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd "$(projectRoot)/terraform/environments/test"
-    #       terraform init \
-    #         -backend-config="storage_account_name=tfstate5848c2ad9dc5" \
-    #         -backend-config="container_name=tfstate" \
-    #         -backend-config="key=test.terraform.tfstate" \
-    #         -backend-config="resource_group_name=Azuredevops" \
-    #         -backend-config="subscription_id=$(ARM_SUBSCRIPTION_ID)" \
-    #         -backend-config="tenant_id=$(ARM_TENANT_ID)"
-
-    # - task: Bash@3
-    #   displayName: 'Create terraform.tfvars'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd "$(projectRoot)/terraform/environments/test"
-    #       cat > terraform.tfvars << EOF
-    #       subscription_id = "$(ARM_SUBSCRIPTION_ID)"
-    #       client_id       = "$(ARM_CLIENT_ID)"
-    #       client_secret   = "$(ARM_CLIENT_SECRET)"
-    #       tenant_id       = "$(ARM_TENANT_ID)"
-    #       location         = "West Europe"
-    #       resource_group   = "Azuredevops"
-    #       application_type = "myWebApp"
-    #       virtual_network_name  = "devopsnet"
-    #       address_space         = ["10.5.0.0/16"]
-    #       address_prefix_test   = "10.5.1.0/24"
-    #       vm_name     = "$(vmImageName)"
-    #       admin_ssh_key = "$(ADMIN_SSH_PUBLIC_KEY)"
-    #       EOF
-
-    # - task: Bash@3
-    #   displayName: 'Terraform Apply'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd "$(projectRoot)/terraform/environments/test"
-    #       terraform apply -var-file=terraform.tfvars -auto-approve
-
     - task: Bash@3
       displayName: 'Configure Selenium'
       inputs:
@@ -149,44 +70,45 @@ stages:
         testResultsFiles: 'automatedtesting/postman/test-results.xml'
         mergeTestResults: true
 
-
-
-  - deployment: DeploySeleniumOnVM
+  - job: DeploySeleniumOnVM
     displayName: 'Deploy Selenium on VM'
-    environment:
-      name: $(vmImageName) 
-      resourceType: VirtualMachine
+    pool:
+      name: myAgentPool
+    steps:
+    - task: Bash@3
+      displayName: 'Install Chrome and Selenium'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '/home/adminuser'
+        script: |
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
 
-    strategy:
-      runOnce:
-        deploy:  
-          steps:  
-          - task: Bash@3
-            inputs: 
-              targetType: 'inline'
-              workingDirectory: '/home/adminuser'
-              script: |
-                #! /bin/bash
-                sudo apt-get upgrade -y 
-                sudo apt-get update -y
-                sudo apt-get install python3-pip -y 
-                sudo apt-get install unzip -y
-                sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-                sudo dpkg -i google-chrome-stable_current_amd64.deb
-                sudo apt-get -f install -y
-                sudo apt-get install -y unzip xvfb libxi6 libgconf-2-4
-                sudo wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
-                sudo unzip chromedriver_linux64.zip
-                
-                sudo apt install python3-pip
-                sudo apt-get install -y chromium-browser 
-                pip3 install selenium
-                
-                export PATH=$PATH:/home/adminuser:/bin
-                sudo python3 '$(Pipeline.Workspace)/$(selenium)/ui_automation.py'
+          # Install Chrome
+          sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
+
+          # Install Chromedriver
+          wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+
+          # Install Python dependencies
+          sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4
+          pip3 install selenium
+
+    - task: Bash@3
+      displayName: 'Run Selenium Test'
+      inputs:
+        targetType: 'inline'
+        script: |
+          python3 $(Pipeline.Workspace)/selenium/ui_automation.py
 
   - job: JMeterTests
     displayName: 'JMeter Tests'
+    pool:
+      name: myAgentPool
     steps:
     - task: Bash@3
       displayName: 'Install JMeter'
