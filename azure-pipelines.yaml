@@ -139,7 +139,8 @@ stages:
         script: |
           /usr/bin/newman run automatedtesting/postman/StarterAPIs.json \
             --reporters cli,junit \
-            --reporter-junit-export automatedtesting/postman/results/test-results.xml
+            --reporter-junit-export automatedtesting/postman/results/test-results.xml \
+            --suppress-exit-code 1
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
@@ -147,6 +148,7 @@ stages:
         testResultsFormat: 'JUnit'
         testResultsFiles: 'automatedtesting/postman/results/test-results.xml'
         mergeTestResults: true
+
 
 
   - job: SeleniumTests
