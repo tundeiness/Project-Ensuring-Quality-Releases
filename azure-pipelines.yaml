@@ -79,7 +79,6 @@ stages:
       displayName: 'Install Chrome and Selenium'
       inputs:
         targetType: 'inline'
-        workingDirectory: '/home/adminuser'
         script: |
           sudo apt-get update -y
           sudo apt-get upgrade -y
@@ -103,7 +102,7 @@ stages:
       inputs:
         targetType: 'inline'
         script: |
-          python3 $(Pipeline.Workspace)/selenium/ui_automation.py
+          python3 automatedtesting/selenium/login.py
 
   - job: JMeterTests
     displayName: 'JMeter Tests'
