@@ -24,106 +24,113 @@ variables:
     value: 'devopsVM'
 
 stages:
-- stage: Build
-  displayName: 'Provision Infrastructure'
-  jobs:
-  - job: BuildInfrastructure
-    displayName: 'Infrastructure Provisioning'
-    steps:
-    - task: Bash@3
-      displayName: 'Configure Selenium'
-      inputs:
-        targetType: 'inline'
-        script: |
-          sudo apt-get update
-          sudo apt-get upgrade -y
-          sudo apt-get install python3-pip unzip expect -y
-          sudo apt-get install -y chromium-browser
-          pip3 install selenium
-          sudo rm -rf chromedriver*
-          wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver -f /usr/bin
+  - stage: Build
+    displayName: 'Provision Infrastructure'
+    jobs:
+      - job: BuildInfrastructure
+        displayName: 'Infrastructure Provisioning'
+        steps:
+          - task: Bash@3
+            displayName: 'Configure Selenium'
+            inputs:
+              targetType: 'inline'
+              script: |
+                sudo apt-get update
+                sudo apt-get upgrade -y
+                sudo apt-get install python3-pip unzip expect -y
+                sudo apt-get install -y chromium-browser
+                pip3 install selenium
+                sudo rm -rf chromedriver*
+                wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
+                unzip chromedriver_linux64.zip
+                sudo mv chromedriver -f /usr/bin
 
-- stage: Test
-  displayName: 'API Testing Stage'
-  jobs:
-  - job: PostmanTests
-    displayName: 'Postman Tests'
-    pool:
-      name: myAgentPool
-    steps:
-    - task: Bash@3
-      displayName: 'Run Postman Tests and Export JUnit Results'
-      inputs:
-        targetType: 'inline'
-        script: |
-          /usr/bin/newman run automatedtesting/postman/StarterAPIs.json \
-            --reporters cli,junit \
-            --reporter-junit-export automatedtesting/postman/test-results.xml \
-            --suppress-exit-code 1
+  - stage: Test
+    displayName: 'API Testing Stage'
+    jobs:
+      - job: PostmanTests
+        displayName: 'Postman Tests'
+        pool:
+          name: myAgentPool
+        steps:
+          - task: Bash@3
+            displayName: 'Run Postman Tests and Export JUnit Results'
+            inputs:
+              targetType: 'inline'
+              script: |
+                /usr/bin/newman run automatedtesting/postman/StarterAPIs.json \
+                  --reporters cli,junit \
+                  --reporter-junit-export automatedtesting/postman/test-results.xml \
+                  --suppress-exit-code 1
 
-    - task: PublishTestResults@2
-      displayName: 'Publish Test Results'
-      inputs:
-        testResultsFormat: 'JUnit'
-        testResultsFiles: 'automatedtesting/postman/test-results.xml'
-        mergeTestResults: true
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'automatedtesting/postman/test-results.xml'
+              mergeTestResults: true
 
-  - job: DeploySeleniumOnVM
-    displayName: 'Deploy Selenium on VM'
-    pool:
-      name: myAgentPool
-    steps:
-    - task: Bash@3
-      displayName: 'Install Chrome and Selenium'
-      inputs:
-        targetType: 'inline'
-        script: |
-          sudo apt-get update -y
-          sudo apt-get upgrade -y
+      - job: DeploySeleniumOnVM
+        displayName: 'Deploy Selenium on VM'
+        pool:
+          name: myAgentPool
+        steps:
+          - task: Bash@3
+            displayName: 'Install Chrome and ChromeDriver'
+            inputs:
+              targetType: 'inline'
+              script: |
+                # Install latest Chrome
+                wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+                sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
 
-          # Install Chrome
-          sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
+                # Find Chrome version
+                chrome_version=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
+                major_version=$(echo $chrome_version | cut -d '.' -f 1)
 
-          # Install Chromedriver
-          wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
+                echo "Installed Chrome version: $chrome_version"
 
-          # Install Python dependencies
-          sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4
-          pip3 install selenium
+                # Get matching ChromeDriver version
+                chromedriver_url=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | \
+                  jq -r --arg ver "$major_version" '.channels.Stable.downloads.chromedriver[] | select(.platform == "linux64") | .url')
 
-    - task: Bash@3
-      displayName: 'Run Selenium Test'
-      inputs:
-        targetType: 'inline'
-        script: |
-          python3 automatedtesting/selenium/login.py
+                echo "Downloading ChromeDriver from $chromedriver_url"
+                wget -q $chromedriver_url -O chromedriver.zip
+                unzip chromedriver.zip
+                sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+                sudo chmod +x /usr/local/bin/chromedriver
 
-  - job: JMeterTests
-    displayName: 'JMeter Tests'
-    pool:
-      name: myAgentPool
-    steps:
-    - task: Bash@3
-      displayName: 'Install JMeter'
-      inputs:
-        targetType: 'inline'
-        script: |
-          sudo apt-get install openjdk-11-jre-headless -y
-          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.4.1.tgz -O jmeter.tgz
-          tar -xzvf jmeter.tgz
+                # Install dependencies
+                sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4 jq
+                pip3 install selenium
 
-    - task: Bash@3
-      displayName: 'Run JMeter'
-      inputs:
-        targetType: 'inline'
-        script: |
-          apache-jmeter-5.4.1/bin/jmeter -n -t automatedtesting/jmeter/Starter.jmx \
-            -l automatedtesting/jmeter/logs/test-output.csv \
-            -e -f -o automatedtesting/jmeter/logs/test-log.html \
-            -j automatedtesting/jmeter/logs/jmeter.log
+          - task: Bash@3
+            displayName: 'Run Selenium Test'
+            inputs:
+              targetType: 'inline'
+              script: |
+                python3 automatedtesting/selenium/login.py
+
+      - job: JMeterTests
+        displayName: 'JMeter Tests'
+        pool:
+          name: myAgentPool
+        steps:
+          - task: Bash@3
+            displayName: 'Install JMeter'
+            inputs:
+              targetType: 'inline'
+              script: |
+                sudo apt-get install openjdk-11-jre-headless -y
+                wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.4.1.tgz -O jmeter.tgz
+                tar -xzvf jmeter.tgz
+
+          - task: Bash@3
+            displayName: 'Run JMeter'
+            inputs:
+              targetType: 'inline'
+              script: |
+                apache-jmeter-5.4.1/bin/jmeter -n -t automatedtesting/jmeter/Starter.jmx \
+                  -l automatedtesting/jmeter/logs/test-output.csv \
+                  -e -f -o automatedtesting/jmeter/logs/test-log.html \
+                  -j automatedtesting/jmeter/logs/jmeter.log
