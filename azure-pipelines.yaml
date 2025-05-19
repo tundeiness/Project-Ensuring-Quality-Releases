@@ -139,29 +139,51 @@ stages:
         script: |
           /usr/bin/newman run automatedtesting/postman/StarterAPIs.json \
             --reporters cli,junit \
-            --reporter-junit-export automatedtesting/postman/results/test-results.xml \
+            --reporter-junit-export automatedtesting/postman/test-results.xml \
             --suppress-exit-code 1
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
       inputs:
         testResultsFormat: 'JUnit'
-        testResultsFiles: 'automatedtesting/postman/results/test-results.xml'
+        testResultsFiles: 'automatedtesting/postman/test-results.xml'
         mergeTestResults: true
 
 
 
-  - job: SeleniumTests
-    displayName: 'Selenium Tests'
-    steps:
-    - task: Bash@3
-      displayName: 'Run Selenium'
-      inputs:
-        targetType: 'inline'
-        script: |
-          python -m pip install --upgrade pip
-          pip install selenium pytest pytest-html chromedriver-py==96.0.4664.18 pytest-xdist pytest-nunit
-          python3 automatedtesting/selenium/login.py
+  - deployment: DeploySeleniumOnVM
+    displayName: 'Deploy Selenium on VM'
+    environment:
+      name: $(vmImageName) 
+      resourceType: VirtualMachine
+
+    strategy:
+      runOnce:
+        deploy:  
+          steps:  
+          - task: Bash@3
+            inputs: 
+              targetType: 'inline'
+              workingDirectory: '/home/adminuser'
+              script: |
+                #! /bin/bash
+                sudo apt-get upgrade -y 
+                sudo apt-get update -y
+                sudo apt-get install python3-pip -y 
+                sudo apt-get install unzip -y
+                sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+                sudo dpkg -i google-chrome-stable_current_amd64.deb
+                sudo apt-get -f install -y
+                sudo apt-get install -y unzip xvfb libxi6 libgconf-2-4
+                sudo wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
+                sudo unzip chromedriver_linux64.zip
+                
+                sudo apt install python3-pip
+                sudo apt-get install -y chromium-browser 
+                pip3 install selenium
+                
+                export PATH=$PATH:/home/adminuser:/bin
+                sudo python3 '$(Pipeline.Workspace)/$(selenium)/ui_automation.py'
 
   - job: JMeterTests
     displayName: 'JMeter Tests'
