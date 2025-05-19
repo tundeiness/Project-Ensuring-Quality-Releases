@@ -125,21 +125,15 @@ stages:
           sudo mv chromedriver -f /usr/bin
 
 - stage: Test
+  displayName: 'API Testing Stage'
   jobs:
   - job: PostmanTests
     displayName: 'Postman Tests'
     pool:
-      vmImage: 'ubuntu-latest'  # Uses Microsoft-hosted agent
+      name: myAgentPool  # <-- Use your self-hosted agent pool here
     steps:
     - task: Bash@3
-      displayName: 'Install Newman'
-      inputs:
-        targetType: 'inline'
-        script: |
-          npm install -g newman
-
-    - task: Bash@3
-      displayName: 'Run Postman Tests and Export JUnit Results'  
+      displayName: 'Run Postman Tests and Export JUnit Results'
       inputs:
         targetType: 'inline'
         script: |
