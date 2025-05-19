@@ -128,6 +128,8 @@ stages:
   jobs:
   - job: PostmanTests
     displayName: 'Postman Tests'
+    pool:
+      vmImage: 'ubuntu-latest'  # Uses Microsoft-hosted agent
     steps:
     - task: Bash@3
       displayName: 'Install Newman'
@@ -144,14 +146,14 @@ stages:
           newman run automatedtesting/postman/StarterAPIs.json \
             --reporters cli,junit \
             --reporter-junit-export automatedtesting/postman/results/test-results.xml
-          
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results'
       inputs:
         testResultsFormat: 'JUnit'
-        testResultsFiles: 'Results/junitReport.xml'
+        testResultsFiles: 'automatedtesting/postman/results/test-results.xml'
         mergeTestResults: true
+
 
   - job: SeleniumTests
     displayName: 'Selenium Tests'
