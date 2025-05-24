@@ -22,6 +22,12 @@ variables:
     value: 'test'
   - name: vmImageName
     value: 'devopsVM'
+  - name: vmPublicIp
+    value: 20.51.128.202  # Replace with actual IP or output it from Terraform
+  - name: sshUsername
+    value: 'adminuser'
+  - name: sshPrivateKey
+    value: 'id_rsa'  # Secure variable
 
 stages:
   - stage: Build
@@ -31,106 +37,50 @@ stages:
         displayName: 'Infrastructure Provisioning'
         steps:
           - task: Bash@3
-            displayName: 'Configure Selenium'
+            displayName: 'Configure Selenium on Build Agent'
             inputs:
               targetType: 'inline'
               script: |
                 sudo apt-get update
                 sudo apt-get upgrade -y
-                sudo apt-get install python3-pip unzip expect -y
-                sudo apt-get install -y chromium-browser
+                sudo apt-get install -y python3-pip unzip expect chromium-browser
                 pip3 install selenium
                 sudo rm -rf chromedriver*
                 wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
                 unzip chromedriver_linux64.zip
-                sudo mv chromedriver -f /usr/bin
+                sudo mv chromedriver /usr/bin/chromedriver
+                sudo chmod +x /usr/bin/chromedriver
 
   - stage: Test
-    displayName: 'API Testing Stage'
+    displayName: 'Selenium Testing Stage'
     jobs:
-      - job: PostmanTests
-        displayName: 'Postman Tests'
-        pool:
-          name: myAgentPool
-        steps:
-          - task: Bash@3
-            displayName: 'Run Postman Tests and Export JUnit Results'
-            inputs:
-              targetType: 'inline'
-              script: |
-                /usr/bin/newman run automatedtesting/postman/StarterAPIs.json \
-                  --reporters cli,junit \
-                  --reporter-junit-export automatedtesting/postman/test-results.xml \
-                  --suppress-exit-code 1
-
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
-            inputs:
-              testResultsFormat: 'JUnit'
-              testResultsFiles: 'automatedtesting/postman/test-results.xml'
-              mergeTestResults: true
-
       - job: DeploySeleniumOnVM
-        displayName: 'Deploy Selenium on VM'
-        pool:
-          name: myAgentPool
+        displayName: 'Run Selenium Test on Remote VM'
         steps:
           - task: Bash@3
-            displayName: 'Install Chrome and ChromeDriver'
+            displayName: 'Create SSH Key File'
             inputs:
               targetType: 'inline'
               script: |
-                # Install latest Chrome
-                wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-                sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
-
-                # Find Chrome version
-                chrome_version=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-                major_version=$(echo $chrome_version | cut -d '.' -f 1)
-
-                echo "Installed Chrome version: $chrome_version"
-
-                # Get matching ChromeDriver version
-                chromedriver_url=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | \
-                  jq -r --arg ver "$major_version" '.channels.Stable.downloads.chromedriver[] | select(.platform == "linux64") | .url')
-
-                echo "Downloading ChromeDriver from $chromedriver_url"
-                wget -q $chromedriver_url -O chromedriver.zip
-                unzip chromedriver.zip
-                sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
-                sudo chmod +x /usr/local/bin/chromedriver
-
-                # Install dependencies
-                sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4 jq
-                pip3 install selenium
+                echo "Writing SSH private key to file..."
+                echo "$sshPrivateKey" > key.pem
+                chmod 600 key.pem
 
           - task: Bash@3
-            displayName: 'Run Selenium Test'
+            displayName: 'Transfer Selenium Test Files to VM'
             inputs:
               targetType: 'inline'
               script: |
-                python3 automatedtesting/selenium/login.py
-
-      - job: JMeterTests
-        displayName: 'JMeter Tests'
-        pool:
-          name: myAgentPool
-        steps:
-          - task: Bash@3
-            displayName: 'Install JMeter'
-            inputs:
-              targetType: 'inline'
-              script: |
-                sudo apt-get install openjdk-11-jre-headless -y
-                wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.4.1.tgz -O jmeter.tgz
-                tar -xzvf jmeter.tgz
+                echo "Copying test files to remote VM..."
+                scp -i key.pem -o StrictHostKeyChecking=no -r automatedtesting/selenium ${sshUsername}@${vmPublicIp}:/home/${sshUsername}/automatedtesting/
 
           - task: Bash@3
-            displayName: 'Run JMeter'
+            displayName: 'Run Selenium Test via SSH'
             inputs:
               targetType: 'inline'
               script: |
-                apache-jmeter-5.4.1/bin/jmeter -n -t automatedtesting/jmeter/Starter.jmx \
-                  -l automatedtesting/jmeter/logs/test-output.csv \
-                  -e -f -o automatedtesting/jmeter/logs/test-log.html \
-                  -j automatedtesting/jmeter/logs/jmeter.log
+                echo "Running test on remote VM..."
+                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} << 'EOF'
+                  cd /home/${sshUsername}/automatedtesting/selenium
+                  python3 login.py
+                EOF
