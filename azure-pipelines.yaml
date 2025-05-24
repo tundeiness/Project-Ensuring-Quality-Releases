@@ -6,7 +6,7 @@ trigger:
       - main
 
 pool:
-  name: myAgentPool
+  name: myAgentPool  # Self-hosted agent pool running on devopsVM
 
 variables:
   - group: azure-credentials   
@@ -24,56 +24,46 @@ variables:
     value: 'devopsVM'
 
 stages:
-- stage: Build
-  displayName: 'Provision Infrastructure'
-  jobs:
-    - job: BuildInfrastructure
-      displayName: 'Infrastructure Provisioning'
-      steps:
-        - task: Bash@3
-          displayName: 'Write SSH Public Key to id_rsa.pub'
-          inputs:
-            targetType: 'inline'
-            script: |
-              echo "$ADMIN_SSH_PUBLIC_KEY" > "$(projectRoot)/terraform/environments/test/id_rsa.pub"
-              chmod 644 "$(projectRoot)/terraform/environments/test/id_rsa.pub"
+  - stage: PerformanceTest
+    displayName: 'Run JMeter Tests'
+    jobs:
+      - job: JMeter
+        displayName: 'Execute JMeter Test Plans on devopsVM'
+        pool:
+          name: myAgentPool  # Assumes this agent runs on devopsVM
+        steps:
+          - task: JMeterInstaller@0
+            displayName: 'Install JMeter 5.3'
+            inputs:
+              jmeterVersion: '5.3'
 
-        - task: ArchiveFiles@2
-          displayName: 'Archive FakeRestAPI'
-          inputs:
-            rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
-            includeRootFolder: false
-            archiveType: 'zip'
-            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+          - task: Bash@3
+            displayName: 'Run Endurance and Stress JMeter Tests'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Creating result directories..."
+                mkdir -p automatedtesting/jmeter/Results/endurance
+                mkdir -p automatedtesting/jmeter/Results/stress
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'Upload Package'
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-            ArtifactName: 'drop-fakerestapi'
-            publishLocation: 'Container'
+                echo "Running endurance.jmx..."
+                jmeter -n -t automatedtesting/jmeter/endurance.jmx \
+                       -l automatedtesting/jmeter/Results/endurance/results.jtl \
+                       -e -o automatedtesting/jmeter/Results/endurance/dashboard
 
-- stage: Deploy
-  displayName: 'Deploy Web App'
-  dependsOn: Build
-  jobs:
-    - deployment: FakeRestAPI
-      displayName: 'Deploy to Azure App Service'
-      environment: 'test'
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - task: DownloadPipelineArtifact@2
-                displayName: 'Download Build Artifact'
-                inputs:
-                  artifact: 'drop-fakerestapi'
-                  path: '$(Pipeline.Workspace)'
+                echo "Running stress.jmx..."
+                jmeter -n -t automatedtesting/jmeter/stress.jmx \
+                       -l automatedtesting/jmeter/Results/stress/results.jtl \
+                       -e -o automatedtesting/jmeter/Results/stress/dashboard
 
-              - task: AzureWebApp@1
-                displayName: 'Deploy to Azure Web App'
-                inputs:
-                  azureSubscription: 'ServiceConnex'
-                  appName: 'myWebApp-AppService-59f507ec'
-                  appType: 'webApp'
-                  package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+                echo "Zipping all JMeter results..."
+                cd automatedtesting/jmeter
+                zip -r ../../JMeter_Combined_Results.zip Results
+                cd -
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish JMeter Test Results'
+            inputs:
+              PathtoPublish: 'JMeter_Combined_Results.zip'
+              ArtifactName: 'JMeterResults'
+              publishLocation: 'Container'
