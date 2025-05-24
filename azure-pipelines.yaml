@@ -23,7 +23,7 @@ variables:
   - name: vmImageName
     value: 'devopsVM'
   - name: vmPublicIp
-    value: 20.51.128.202  # Replace with actual IP or output it from Terraform
+    value: '20.51.128.202'  # Replace with actual IP or output it from Terraform
   - name: sshUsername
     value: 'adminuser'
   - name: sshPrivateKey
