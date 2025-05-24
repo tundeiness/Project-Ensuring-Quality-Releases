@@ -54,12 +54,12 @@ stages:
 
                 echo "Running endurance.jmx..."
                 jmeter -n -t automatedtesting/jmeter/endurance.jmx \
-                       -l automatedtesting/jmeter/Results/endurance/results.jtl \
+                       -l automatedtesting/jmeter/Results/endurance/endurance-results.jtl \
                        -e -o automatedtesting/jmeter/Results/endurance/dashboard
 
                 echo "Running stress.jmx..."
                 jmeter -n -t automatedtesting/jmeter/stress.jmx \
-                       -l automatedtesting/jmeter/Results/stress/results.jtl \
+                       -l automatedtesting/jmeter/Results/stress/stress-results.jtl \
                        -e -o automatedtesting/jmeter/Results/stress/dashboard
 
                 echo "Zipping all JMeter results..."
