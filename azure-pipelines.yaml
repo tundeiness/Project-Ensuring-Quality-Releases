@@ -5,13 +5,10 @@ trigger:
     include:
       - main
 
-pool:
-  name: myAgentPool  # Self-hosted agent pool running on devopsVM
-
 variables:
-  - group: azure-credentials   
+  - group: azure-credentials
   - group: azure-storage-key
-  - group: vm-ssh-key          
+  - group: vm-ssh-key
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
@@ -28,10 +25,19 @@ stages:
     displayName: 'Run JMeter Tests'
     jobs:
       - job: JMeter
-        displayName: 'Execute JMeter Test Plans on devopsVM'
+        displayName: 'Execute JMeter Test Plans'
         pool:
-          name: myAgentPool  # Assumes this agent runs on devopsVM
+          name: myAgentPool  # Self-hosted agent pool running on devopsVM
         steps:
+          - task: Bash@3
+            displayName: 'Install Java (OpenJDK 11)'
+            inputs:
+              targetType: 'inline'
+              script: |
+                sudo apt-get update
+                sudo apt-get install -y openjdk-11-jdk
+                java -version
+
           - task: JMeterInstaller@0
             displayName: 'Install JMeter 5.3'
             inputs:
