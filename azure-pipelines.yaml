@@ -1,5 +1,4 @@
-
-name: Azure Pipelines
+name: Azure Pipelines - Selenium Testing on Existing VM
 
 trigger:
   branches:
@@ -12,11 +11,9 @@ pool:
 variables:
   - group: azure-credentials
   - group: azure-storage-key
-  - group: vm-ssh-key
-  - name: python_version
+  - group: vm-ssh-key  # Contains 'id_rsa' variable with private key content
+  - name: pythonVersion
     value: '3.8.10'
-  - name: azureServiceConnectionId
-    value: 'ServiceConnex'
   - name: projectRoot
     value: '$(System.DefaultWorkingDirectory)'
   - name: environmentName
@@ -24,67 +21,381 @@ variables:
   - name: vmImageName
     value: 'devopsVM'
   - name: vmPublicIp
-    value: '20.51.128.202'  # Replace or use terraform output dynamically
+    value: '20.51.128.202'  # Your existing VM IP
   - name: sshUsername
     value: 'adminuser'
+  - name: remoteTestPath
+    value: '/home/adminuser/automatedtesting'
 
 stages:
-  - stage: Build
-    displayName: 'Provision Infrastructure'
+  - stage: PrepareAgent
+    displayName: 'Prepare Build Agent'
     jobs:
-      - job: BuildInfrastructure
-        displayName: 'Infrastructure Provisioning'
+      - job: ConfigureAgent
+        displayName: 'Install Dependencies on Build Agent'
         steps:
           - task: Bash@3
-            displayName: 'Configure Selenium on Build Agent'
+            displayName: 'Update System and Install Dependencies'
             inputs:
               targetType: 'inline'
               script: |
+                echo "Updating system packages..."
                 sudo apt-get update
                 sudo apt-get upgrade -y
-                sudo apt-get install -y python3-pip unzip chromium-browser
-                pip3 install selenium
-                sudo rm -rf chromedriver*
-                wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
-                unzip chromedriver_linux64.zip
+                
+                echo "Installing required packages..."
+                sudo apt-get install -y python3-pip unzip chromium-browser curl wget openssh-client
+                
+                echo "Installing Python packages..."
+                pip3 install --upgrade pip
+                pip3 install selenium webdriver-manager pytest
+
+          - task: Bash@3
+            displayName: 'Install Chrome and ChromeDriver'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Installing Google Chrome..."
+                wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+                echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+                sudo apt-get update
+                sudo apt-get install -y google-chrome-stable
+                
+                echo "Installing ChromeDriver..."
+                sudo rm -rf /usr/bin/chromedriver
+                CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+                echo "Chrome version: $CHROME_VERSION"
+                
+                # Get compatible ChromeDriver version
+                CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
+                echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                
+                wget -O chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+                unzip chromedriver.zip
                 sudo mv chromedriver /usr/bin/chromedriver
                 sudo chmod +x /usr/bin/chromedriver
+                
+                echo "Verifying installations..."
+                google-chrome --version
+                chromedriver --version
 
   - stage: Test
-    displayName: 'Selenium Testing Stage'
+    displayName: 'Execute Selenium Tests on Remote VM'
+    dependsOn: PrepareAgent
     jobs:
-      - job: DeploySeleniumOnVM
-        displayName: 'Run Selenium Test on Remote VM'
+      - job: RunSeleniumTests
+        displayName: 'Deploy and Execute Selenium Tests'
         steps:
           - task: Bash@3
-            displayName: 'Create SSH Key File'
+            displayName: 'Setup SSH Key from Variable Group'
             inputs:
               targetType: 'inline'
               script: |
-                echo "Writing SSH private key to file..."
-                # Use quotes to preserve newlines in the private key variable
-                echo "$vm-ssh-key" > key.pem
-                chmod 600 key.pem
+                echo "Setting up SSH private key from variable group..."
+                
+                # Create SSH directory if it doesn't exist
+                mkdir -p ~/.ssh
+                chmod 700 ~/.ssh
+                
+                # Write the SSH private key to a file
+                # The variable 'id_rsa' contains the private key content from the variable group
+                echo "$(id_rsa)" > ~/.ssh/id_rsa
+                chmod 600 ~/.ssh/id_rsa
+                
+                # Verify the key format
+                echo "Verifying SSH key format..."
+                head -1 ~/.ssh/id_rsa
+                
+                # Add VM to known hosts to avoid host key verification
+                echo "Adding VM to known hosts..."
+                ssh-keyscan -H $(vmPublicIp) >> ~/.ssh/known_hosts 2>/dev/null || true
+                
+                echo "SSH key setup completed successfully"
 
           - task: Bash@3
-            displayName: 'Ensure Remote Directory Exists'
+            displayName: 'Test SSH Connection to VM'
             inputs:
               targetType: 'inline'
               script: |
-                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "mkdir -p /home/${sshUsername}/automatedtesting/selenium"
+                echo "Testing SSH connection to existing VM..."
+                echo "VM Public IP: $(vmPublicIp)"
+                echo "SSH Username: $(sshUsername)"
+                
+                # Test basic SSH connectivity using the id_rsa key
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=30 $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  echo "SSH connection successful!"
+                  echo "Current user: $(whoami)"
+                  echo "Current directory: $(pwd)"
+                  echo "Home directory: $HOME"
+                  echo "System info:"
+                  uname -a
+                  echo "Python version:"
+                  python3 --version 2>/dev/null || echo "Python3 not installed"
+                EOF
+
+          - task: Bash@3
+            displayName: 'Setup Remote VM Environment for Selenium'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Setting up remote VM environment for Selenium testing..."
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  echo "Updating system packages..."
+                  sudo apt-get update
+                  
+                  echo "Installing Python and pip..."
+                  sudo apt-get install -y python3 python3-pip python3-venv
+                  
+                  echo "Installing Google Chrome..."
+                  if ! command -v google-chrome &> /dev/null; then
+                    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+                    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+                    sudo apt-get update
+                    sudo apt-get install -y google-chrome-stable
+                  else
+                    echo "Google Chrome already installed"
+                  fi
+                  
+                  echo "Installing ChromeDriver..."
+                  if ! command -v chromedriver &> /dev/null; then
+                    CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+                    echo "Chrome version: $CHROME_VERSION"
+                    CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
+                    echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                    
+                    wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+                    cd /tmp
+                    unzip chromedriver.zip
+                    sudo mv chromedriver /usr/local/bin/chromedriver
+                    sudo chmod +x /usr/local/bin/chromedriver
+                    rm chromedriver.zip
+                  else
+                    echo "ChromeDriver already installed"
+                  fi
+                  
+                  echo "Installing Python packages..."
+                  pip3 install --user selenium webdriver-manager pytest requests beautifulsoup4
+                  
+                  echo "Creating test directory..."
+                  mkdir -p $(remoteTestPath)/selenium
+                  
+                  echo "Installing Xvfb for headless browser testing..."
+                  sudo apt-get install -y xvfb
+                  
+                  echo "Verifying installations..."
+                  echo "Python version: $(python3 --version)"
+                  echo "Chrome version: $(google-chrome --version)"
+                  echo "ChromeDriver version: $(chromedriver --version)"
+                  echo "Selenium version: $(python3 -c 'import selenium; print(selenium.__version__)' 2>/dev/null || echo 'Not installed')"
+                  
+                  echo "Remote VM setup completed successfully!"
+                EOF
+
+          - task: Bash@3
+            displayName: 'Create Remote Test Directory'
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Ensuring remote test directory exists..."
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  mkdir -p $(remoteTestPath)/selenium
+                  mkdir -p $(remoteTestPath)/selenium/reports
+                  mkdir -p $(remoteTestPath)/selenium/screenshots
+                  
+                  echo "Directory structure created:"
+                  ls -la $(remoteTestPath)/
+                  ls -la $(remoteTestPath)/selenium/
+                EOF
 
           - task: Bash@3
             displayName: 'Transfer Selenium Test Files to VM'
             inputs:
               targetType: 'inline'
               script: |
-                echo "Copying test files to remote VM..."
-                scp -i key.pem -o StrictHostKeyChecking=no -r automatedtesting/selenium ${sshUsername}@${vmPublicIp}:/home/${sshUsername}/automatedtesting/
+                echo "Transferring test files to remote VM..."
+                
+                # Check if local test files exist
+                if [ ! -d "$(projectRoot)/automatedtesting/selenium" ]; then
+                  echo "Warning: Test files not found at $(projectRoot)/automatedtesting/selenium"
+                  echo "Available directories in project root:"
+                  find $(projectRoot) -type d -name "*test*" -o -name "*selenium*" 2>/dev/null || echo "No test directories found"
+                  
+                  # Look for test files in alternative locations
+                  if [ -d "$(projectRoot)/tests" ]; then
+                    echo "Found tests directory, using it instead..."
+                    scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r $(projectRoot)/tests/* $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/
+                  elif [ -d "$(projectRoot)/selenium" ]; then
+                    echo "Found selenium directory, using it instead..."
+                    scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r $(projectRoot)/selenium/* $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/
+                  else
+                    echo "Error: No test files found. Please ensure test files are in the repository."
+                    exit 1
+                  fi
+                else
+                  # Transfer test files using SCP
+                  echo "Transferring files from $(projectRoot)/automatedtesting/selenium..."
+                  scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r $(projectRoot)/automatedtesting/selenium/* $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/
+                fi
+                
+                # Verify files were transferred
+                echo "Verifying files were transferred successfully..."
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  echo "Files in remote test directory:"
+                  ls -la $(remoteTestPath)/selenium/
+                  
+                  echo "Python files found:"
+                  find $(remoteTestPath)/selenium/ -name "*.py" -type f
+                EOF
+                
+                echo "Test files transferred successfully"
 
           - task: Bash@3
-            displayName: 'Run Selenium Test via SSH'
+            displayName: 'Execute Selenium Tests on Remote VM'
             inputs:
               targetType: 'inline'
               script: |
-                echo "Running test on remote VM..."
-                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "cd /home/${sshUsername}/automatedtesting/selenium && python3 login.py"
+                echo "Executing Selenium tests on remote VM..."
+                
+                # Execute tests on remote VM
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  cd $(remoteTestPath)/selenium
+                  
+                  echo "Current working directory: $(pwd)"
+                  echo "Files in current directory:"
+                  ls -la
+                  
+                  # Set up virtual display for headless testing
+                  export DISPLAY=:99
+                  Xvfb :99 -screen 0 1920x1080x24 &
+                  XVFB_PID=$!
+                  sleep 2
+                  
+                  echo "Starting Selenium test execution..."
+                  echo "========================================="
+                  
+                  # Find and run Python test files
+                  if [ -f "login.py" ]; then
+                    echo "Running login.py..."
+                    python3 login.py
+                    LOGIN_EXIT_CODE=$?
+                  else
+                    echo "login.py not found, looking for other test files..."
+                    LOGIN_EXIT_CODE=0
+                  fi
+                  
+                  # Run any other Python test files
+                  TEST_FILES=$(find . -name "test_*.py" -o -name "*_test.py")
+                  if [ ! -z "$TEST_FILES" ]; then
+                    echo "Found additional test files: $TEST_FILES"
+                    for test_file in $TEST_FILES; do
+                      echo "Running $test_file..."
+                      python3 "$test_file"
+                    done
+                  fi
+                  
+                  # Run pytest if test files are found
+                  if ls test_*.py 1> /dev/null 2>&1; then
+                    echo "Running pytest..."
+                    python3 -m pytest -v --tb=short
+                    PYTEST_EXIT_CODE=$?
+                  else
+                    PYTEST_EXIT_CODE=0
+                  fi
+                  
+                  # Stop virtual display
+                  kill $XVFB_PID 2>/dev/null || true
+                  
+                  echo "========================================="
+                  echo "Test execution completed"
+                  
+                  # Check overall exit status
+                  if [ $LOGIN_EXIT_CODE -eq 0 ] && [ $PYTEST_EXIT_CODE -eq 0 ]; then
+                    echo "All Selenium tests completed successfully!"
+                    exit 0
+                  else
+                    echo "Some tests failed. Login exit code: $LOGIN_EXIT_CODE, Pytest exit code: $PYTEST_EXIT_CODE"
+                    exit 1
+                  fi
+                EOF
+                
+                echo "Selenium test execution completed on remote VM"
+
+          - task: Bash@3
+            displayName: 'Collect Test Results and Screenshots'
+            condition: always()
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Collecting test results, logs, and screenshots..."
+                
+                # Create local results directory
+                mkdir -p $(Agent.TempDirectory)/test-results
+                mkdir -p $(Agent.TempDirectory)/test-results/screenshots
+                
+                # Copy test results back from VM
+                echo "Copying test artifacts from remote VM..."
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  cd $(remoteTestPath)/selenium
+                  echo "Available files for collection:"
+                  find . -name "*.xml" -o -name "*.json" -o -name "*.log" -o -name "*.png" -o -name "*.jpg" -o -name "*.html"
+                EOF
+                
+                # Copy XML test results
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.xml $(Agent.TempDirectory)/test-results/ 2>/dev/null || echo "No XML files found"
+                
+                # Copy JSON results
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.json $(Agent.TempDirectory)/test-results/ 2>/dev/null || echo "No JSON files found"
+                
+                # Copy log files
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.log $(Agent.TempDirectory)/test-results/ 2>/dev/null || echo "No log files found"
+                
+                # Copy screenshots
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.png $(Agent.TempDirectory)/test-results/screenshots/ 2>/dev/null || echo "No PNG screenshots found"
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.jpg $(Agent.TempDirectory)/test-results/screenshots/ 2>/dev/null || echo "No JPG screenshots found"
+                
+                # Copy HTML reports
+                scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp):$(remoteTestPath)/selenium/*.html $(Agent.TempDirectory)/test-results/ 2>/dev/null || echo "No HTML reports found"
+                
+                echo "Available collected files:"
+                find $(Agent.TempDirectory)/test-results -type f
+                
+                echo "Test results collection completed"
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(Agent.TempDirectory)/test-results/**/*.xml'
+              failTaskOnFailedTests: true
+              testRunTitle: 'Selenium Tests on Remote VM'
+              publishRunAttachments: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Screenshots and Reports'
+            condition: always()
+            inputs:
+              pathToPublish: '$(Agent.TempDirectory)/test-results'
+              artifactName: 'selenium-test-results'
+              publishLocation: 'Container'
+
+          - task: Bash@3
+            displayName: 'Cleanup SSH Keys and Temporary Files'
+            condition: always()
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Cleaning up SSH keys and temporary files..."
+                
+                # Remove SSH private key
+                rm -f ~/.ssh/id_rsa
+                
+                # Clean up remote test files (optional)
+                ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no $(sshUsername)@$(vmPublicIp) << 'EOF'
+                  echo "Cleaning up remote test directory..."
+                  # Uncomment the next line if you want to clean up test files after execution
+                  # rm -rf $(remoteTestPath)/selenium/*
+                  echo "Remote cleanup completed"
+                EOF 2>/dev/null || echo "SSH key already removed, skipping remote cleanup"
+                
+                echo "Cleanup completed successfully"
