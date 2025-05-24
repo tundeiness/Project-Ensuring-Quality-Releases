@@ -23,10 +23,11 @@ variables:
   - name: vmImageName
     value: 'devopsVM'
   - name: vmPublicIp
-    value: '4.246.204.235'  # Replace or use terraform output dynamically
+    value: '4.246.204.235'  # Replace with actual IP or output it from Terraform
   - name: sshUsername
-    value: 'adminuser'
-  # Note: sshPrivateKey variable should be multiline secret containing your private key content!
+    value: 'azureuser'
+  - name: sshPrivateKey
+    value: 'id_rsa'  # Secure variable
 
 stages:
   - stage: Build
@@ -42,7 +43,7 @@ stages:
               script: |
                 sudo apt-get update
                 sudo apt-get upgrade -y
-                sudo apt-get install -y python3-pip unzip chromium-browser
+                sudo apt-get install -y python3-pip unzip expect chromium-browser
                 pip3 install selenium
                 sudo rm -rf chromedriver*
                 wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
@@ -62,16 +63,8 @@ stages:
               targetType: 'inline'
               script: |
                 echo "Writing SSH private key to file..."
-                # Use quotes to preserve newlines in the private key variable
                 echo "$sshPrivateKey" > key.pem
                 chmod 600 key.pem
-
-          - task: Bash@3
-            displayName: 'Ensure Remote Directory Exists'
-            inputs:
-              targetType: 'inline'
-              script: |
-                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "mkdir -p /home/${sshUsername}/automatedtesting/selenium"
 
           - task: Bash@3
             displayName: 'Transfer Selenium Test Files to VM'
@@ -87,4 +80,7 @@ stages:
               targetType: 'inline'
               script: |
                 echo "Running test on remote VM..."
-                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "cd /home/${sshUsername}/automatedtesting/selenium && python3 login.py"
+                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} << 'EOF'
+                  cd /home/${sshUsername}/automatedtesting/selenium
+                  python3 login.py
+                EOF
