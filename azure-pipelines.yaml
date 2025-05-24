@@ -62,22 +62,56 @@ stages:
                 sudo apt-get install -y google-chrome-stable
                 
                 echo "Installing ChromeDriver..."
-                sudo rm -rf /usr/bin/chromedriver
-                CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
+                # Remove any existing chromedriver
+                sudo rm -rf /usr/bin/chromedriver /usr/local/bin/chromedriver
+                
+                # Get Chrome version
+                CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+                CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
                 echo "Chrome version: $CHROME_VERSION"
+                echo "Chrome major version: $CHROME_MAJOR_VERSION"
                 
-                # Get compatible ChromeDriver version
-                CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
-                echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                # For Chrome 115+, use the new ChromeDriver API
+                if [ "$CHROME_MAJOR_VERSION" -ge 115 ]; then
+                  echo "Using new ChromeDriver API for Chrome 115+"
+                  CHROMEDRIVER_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+                  CHROMEDRIVER_VERSION=$(curl -s $CHROMEDRIVER_URL | grep -o '"version":"[^"]*' | head -1 | cut -d'"' -f4)
+                  DOWNLOAD_URL="https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+                  echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                  echo "Download URL: $DOWNLOAD_URL"
+                  
+                  wget -O chromedriver.zip "$DOWNLOAD_URL"
+                  unzip chromedriver.zip
+                  sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+                  rm -rf chromedriver-linux64 chromedriver.zip
+                else
+                  echo "Using legacy ChromeDriver API for Chrome < 115"
+                  CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION")
+                  echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                  
+                  wget -O chromedriver.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+                  unzip chromedriver.zip
+                  sudo mv chromedriver /usr/local/bin/chromedriver
+                  rm chromedriver.zip
+                fi
                 
-                wget -O chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-                unzip chromedriver.zip
-                sudo mv chromedriver /usr/bin/chromedriver
-                sudo chmod +x /usr/bin/chromedriver
+                # Set proper permissions and create symlink
+                sudo chmod +x /usr/local/bin/chromedriver
+                sudo ln -sf /usr/local/bin/chromedriver /usr/bin/chromedriver
+                
+                # Add to PATH if not already there
+                echo 'export PATH=$PATH:/usr/local/bin' | sudo tee -a /etc/environment
+                export PATH=$PATH:/usr/local/bin
                 
                 echo "Verifying installations..."
+                echo "Chrome version:"
                 google-chrome --version
-                chromedriver --version
+                echo "ChromeDriver version:"
+                /usr/local/bin/chromedriver --version
+                echo "ChromeDriver location:"
+                which chromedriver
+                ls -la /usr/local/bin/chromedriver
+                ls -la /usr/bin/chromedriver 2>/dev/null || echo "/usr/bin/chromedriver symlink not found"
 
   - stage: Test
     displayName: 'Execute Selenium Tests on Remote VM'
@@ -158,17 +192,45 @@ stages:
                   
                   echo "Installing ChromeDriver..."
                   if ! command -v chromedriver &> /dev/null; then
-                    CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-                    echo "Chrome version: $CHROME_VERSION"
-                    CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%%.*}")
-                    echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                    # Remove any existing chromedriver
+                    sudo rm -rf /usr/bin/chromedriver /usr/local/bin/chromedriver
                     
-                    wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-                    cd /tmp
-                    unzip chromedriver.zip
-                    sudo mv chromedriver /usr/local/bin/chromedriver
+                    CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+                    CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
+                    echo "Chrome version: $CHROME_VERSION"
+                    echo "Chrome major version: $CHROME_MAJOR_VERSION"
+                    
+                    # For Chrome 115+, use the new ChromeDriver API
+                    if [ "$CHROME_MAJOR_VERSION" -ge 115 ]; then
+                      echo "Using new ChromeDriver API for Chrome 115+"
+                      CHROMEDRIVER_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+                      CHROMEDRIVER_VERSION=$(curl -s $CHROMEDRIVER_URL | grep -o '"version":"[^"]*' | head -1 | cut -d'"' -f4)
+                      DOWNLOAD_URL="https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+                      echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                      
+                      wget -O /tmp/chromedriver.zip "$DOWNLOAD_URL"
+                      cd /tmp
+                      unzip chromedriver.zip
+                      sudo mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+                      rm -rf chromedriver-linux64 chromedriver.zip
+                    else
+                      echo "Using legacy ChromeDriver API for Chrome < 115"
+                      CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION")
+                      echo "ChromeDriver version: $CHROMEDRIVER_VERSION"
+                      
+                      wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+                      cd /tmp
+                      unzip chromedriver.zip
+                      sudo mv chromedriver /usr/local/bin/chromedriver
+                      rm chromedriver.zip
+                    fi
+                    
+                    # Set proper permissions and create symlink
                     sudo chmod +x /usr/local/bin/chromedriver
-                    rm chromedriver.zip
+                    sudo ln -sf /usr/local/bin/chromedriver /usr/bin/chromedriver
+                    
+                    # Ensure it's in PATH
+                    export PATH=$PATH:/usr/local/bin
                   else
                     echo "ChromeDriver already installed"
                   fi
@@ -185,7 +247,8 @@ stages:
                   echo "Verifying installations..."
                   echo "Python version: $(python3 --version)"
                   echo "Chrome version: $(google-chrome --version)"
-                  echo "ChromeDriver version: $(chromedriver --version)"
+                  echo "ChromeDriver path: $(which chromedriver)"
+                  echo "ChromeDriver version: $(/usr/local/bin/chromedriver --version)"
                   echo "Selenium version: $(python3 -c 'import selenium; print(selenium.__version__)' 2>/dev/null || echo 'Not installed')"
                   
                   echo "Remote VM setup completed successfully!"
@@ -269,6 +332,13 @@ stages:
                   Xvfb :99 -screen 0 1920x1080x24 &
                   XVFB_PID=$!
                   sleep 2
+                  
+                  # Ensure ChromeDriver is in PATH
+                  export PATH=$PATH:/usr/local/bin:/usr/bin
+                  
+                  echo "PATH: $PATH"
+                  echo "ChromeDriver location: $(which chromedriver)"
+                  echo "ChromeDriver version: $(chromedriver --version)"
                   
                   echo "Starting Selenium test execution..."
                   echo "========================================="
