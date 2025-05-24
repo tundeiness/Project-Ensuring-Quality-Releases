@@ -1,3 +1,14 @@
+
+name: Azure Pipelines
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: myAgentPool
+
 variables:
   - group: azure-credentials
   - group: azure-storage-key
