@@ -1,13 +1,3 @@
-name: Azure Pipelines
-
-trigger:
-  branches:
-    include:
-      - main
-
-pool:
-  name: myAgentPool
-
 variables:
   - group: azure-credentials
   - group: azure-storage-key
@@ -23,11 +13,9 @@ variables:
   - name: vmImageName
     value: 'devopsVM'
   - name: vmPublicIp
-    value: '20.51.128.202'  # Replace with actual IP or output it from Terraform
+    value: '20.51.128.202'  # Replace or use terraform output dynamically
   - name: sshUsername
     value: 'adminuser'
-  - name: sshPrivateKey
-    value: 'id_rsa'  # Secure variable
 
 stages:
   - stage: Build
@@ -43,7 +31,7 @@ stages:
               script: |
                 sudo apt-get update
                 sudo apt-get upgrade -y
-                sudo apt-get install -y python3-pip unzip expect chromium-browser
+                sudo apt-get install -y python3-pip unzip chromium-browser
                 pip3 install selenium
                 sudo rm -rf chromedriver*
                 wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
@@ -63,8 +51,16 @@ stages:
               targetType: 'inline'
               script: |
                 echo "Writing SSH private key to file..."
-                echo "$sshPrivateKey" > key.pem
+                # Use quotes to preserve newlines in the private key variable
+                echo "$vm-ssh-key" > key.pem
                 chmod 600 key.pem
+
+          - task: Bash@3
+            displayName: 'Ensure Remote Directory Exists'
+            inputs:
+              targetType: 'inline'
+              script: |
+                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "mkdir -p /home/${sshUsername}/automatedtesting/selenium"
 
           - task: Bash@3
             displayName: 'Transfer Selenium Test Files to VM'
@@ -80,7 +76,4 @@ stages:
               targetType: 'inline'
               script: |
                 echo "Running test on remote VM..."
-                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} << 'EOF'
-                  cd /home/${sshUsername}/automatedtesting/selenium
-                  python3 login.py
-                EOF
+                ssh -i key.pem -o StrictHostKeyChecking=no ${sshUsername}@${vmPublicIp} "cd /home/${sshUsername}/automatedtesting/selenium && python3 login.py"
