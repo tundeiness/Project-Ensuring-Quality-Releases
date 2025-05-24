@@ -9,7 +9,7 @@ RAND_SUFFIX=$(openssl rand -hex 6)    # e.g. a1b2c3d4e5f6
 RESOURCE_GROUP_NAME="Azuredevops"
 STORAGE_ACCOUNT_NAME="tfstate${RAND_SUFFIX}"
 CONTAINER_NAME="tfstate"
-LOCATION="West Europe"
+LOCATION="East US"
 
 # This command is not needed in the Udacity provided Azure account. 
 # Create resource group
