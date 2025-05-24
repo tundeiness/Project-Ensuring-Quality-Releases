@@ -80,7 +80,7 @@ def add_items_to_cart(driver):
     )
     
     # Add first 3 items to the cart
-    for i in range(min(3, len(add_to_cart_buttons))):
+    for i in range(min(6, len(add_to_cart_buttons))):
         item_name = driver.find_element(By.XPATH, 
             f"(//div[@class='inventory_item_name'])[{i+1}]").text
         add_to_cart_buttons[i].click()
@@ -106,7 +106,7 @@ def remove_items_from_cart(driver):
     )
     
     # Get the names of items being removed for better logging
-    for i in range(min(2, len(remove_buttons))):
+    for i in range(min(5, len(remove_buttons))):
         item_container = remove_buttons[i].find_element(By.XPATH, "./ancestor::div[@class='cart_item']")
         item_name = item_container.find_element(By.CLASS_NAME, "inventory_item_name").text
         remove_buttons[i].click()
