@@ -31,147 +31,83 @@ stages:
     displayName: 'Infrastructure Provisioning'
     steps:
 
-    # - task: Bash@3
-    #   displayName: 'Install Azure CLI'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.5.7'
 
     - task: Bash@3
-      displayName: 'Install Postman & Newman'
+      displayName: 'Write SSH Public Key to id_rsa.pub'
       inputs:
         targetType: 'inline'
         script: |
-          # Optional: Install tools
-          echo "Installing Postman dependencies..."
+          echo "$ADMIN_SSH_PUBLIC_KEY" > $(projectRoot)/terraform/environments/test/id_rsa.pub
+          chmod 644 $(projectRoot)/terraform/environments/test/id_rsa.pub
 
-    # - task: TerraformInstaller@0
-    #   displayName: 'Install Terraform'
-    #   inputs:
-    #     terraformVersion: '1.5.7'
-
-    # - task: Bash@3
-    #   displayName: 'Write SSH Public Key to id_rsa.pub'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       echo "$ADMIN_SSH_PUBLIC_KEY" > $(projectRoot)/terraform/environments/test/id_rsa.pub
-    #       chmod 644 $(projectRoot)/terraform/environments/test/id_rsa.pub
-
-    # - task: Bash@3
-    #   displayName: 'Terraform Init'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd $(projectRoot)/terraform/environments/test
-    #       terraform init \
-    #         -backend-config="storage_account_name=tfstate5848c2ad9dc5" \
-    #         -backend-config="container_name=tfstate" \
-    #         -backend-config="key=test.terraform.tfstate" \
-    #         -backend-config="resource_group_name=Azuredevops" \
-    #         -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-    #         -backend-config="tenant_id=$ARM_TENANT_ID"
-
-    # - task: Bash@3
-    #   displayName: 'Create terraform.tfvars'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd $(projectRoot)/terraform/environments/test
-    #       cat > terraform.tfvars << EOF
-    #       # Azure subscription vars
-    #       subscription_id = "$ARM_SUBSCRIPTION_ID"
-    #       client_id       = "$ARM_CLIENT_ID"
-    #       client_secret   = "$ARM_CLIENT_SECRET"
-    #       tenant_id       = "$ARM_TENANT_ID"
-
-    #       # Resource Group/Location
-    #       location         = "West Europe"
-    #       resource_group   = "Azuredevops"
-    #       application_type = "myWebApp"
-
-    #       # Network
-    #       virtual_network_name  = "devopsnet"
-    #       address_space         = ["10.5.0.0/16"]
-    #       address_prefix_test   = "10.5.1.0/24"
-
-    #       # VM
-    #       vm_name     = "$(vmImageName)"
-    #       admin_ssh_key = "$ADMIN_SSH_PUBLIC_KEY"
-    #       EOF
-
-    #       echo "terraform.tfvars created:"
-    #       cat terraform.tfvars
-
-    # - task: Bash@3
-    #   displayName: 'Terraform Apply'
-    #   env:
-    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd $(projectRoot)/terraform/environments/test
-    #       terraform apply -var-file=terraform.tfvars -auto-approve
-
-    - task: ArchiveFiles@2
-      displayName: 'Archive FakeRestAPI'
+    - task: Bash@3
+      displayName: 'Terraform Init'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       inputs:
-        rootFolderOrFile: './automatedtesting/jmeter/fakerestapi'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-    - publish: $(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip
-      displayName: 'Upload Package'
-      artifact: drop-fakerestapi
-- stage:
-  jobs:
-  - deployment: FakeRestAPI
-    pool:
-      vmImage: vmImageName
-    environment: 'Development'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App'
-            inputs:
-              azureSubscription: 'c2669e0a-34a5-40d0-a3c3-08858cb49a53'
-              appName: 'flask-automatedtesting'
-              appType: webApp
-              package: $(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip
-  - deployment: VMDeploy
-    displayName: Python-Flask-AT
-    environment:
-      name:  'vmImageName'
-      resourceType: VirtualMachine
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                #! /bin/bash
+        targetType: 'inline'
+        script: |
+          cd $(projectRoot)/terraform/environments/test
+          terraform init \
+            -backend-config="storage_account_name=tfstate6212963a1b09" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=test.terraform.tfstate" \
+            -backend-config="resource_group_name=Azuredevops" \
+            -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+            -backend-config="tenant_id=$ARM_TENANT_ID"
 
-                sudo apt-get upgrade -y
-                sudo apt-get install python3-pip -y
-                sudo apt-get install unzip -y
-                sudo apt-get install -y chromium-browser
-                pip3 install selenium
-                # export PATH=$PATH:some/path
+    - task: Bash@3
+      displayName: 'Create terraform.tfvars'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(projectRoot)/terraform/environments/test
+          cat > terraform.tfvars << EOF
+          # Azure subscription vars
+          subscription_id = "$ARM_SUBSCRIPTION_ID"
+          client_id       = "$ARM_CLIENT_ID"
+          client_secret   = "$ARM_CLIENT_SECRET"
+          tenant_id       = "$ARM_TENANT_ID"
+
+          # Resource Group/Location
+          location         = "East US"
+          resource_group   = "Azuredevops"
+          application_type = "myWebApp"
+
+          # Network
+          virtual_network_name  = "devopsnet"
+          address_space         = ["10.5.0.0/16"]
+          address_prefix_test   = "10.5.1.0/24"
+
+          # VM
+          vm_name     = "$(vmImageName)"
+          admin_ssh_key = "$ADMIN_SSH_PUBLIC_KEY"
+          EOF
+
+          echo "terraform.tfvars created:"
+          cat terraform.tfvars
+
+    - task: Bash@3
+      displayName: 'Terraform Apply'
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(projectRoot)/terraform/environments/test
+          terraform apply -var-file=terraform.tfvars -auto-approve
