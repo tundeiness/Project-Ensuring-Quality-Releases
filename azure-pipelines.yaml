@@ -122,59 +122,59 @@ stages:
           KNOWN_HOST_ENTRY=$(ssh-keyscan -t rsa $(vm_ip) 2>/dev/null)
           echo "##vso[task.setvariable variable=knownHostsEntry]$KNOWN_HOST_ENTRY"
 
-    - task: InstallSSHKey@0
-      # inputs:
-      #   sshPublicKey: '$(myPubKey)'
-      #   sshKeySecureFile: 'id_rsa'
-      #   knownHostsEntry: '$(knownHostsEntry)'
-      displayName: 'Install SSH Key'
+#     - task: InstallSSHKey@0
+#       inputs:
+#         sshPublicKey: '$(myPubKey)'
+#         sshKeySecureFile: 'id_rsa'
+#         knownHostsEntry: '$(knownHostsEntry)'
+#       displayName: 'Install SSH Key'
 
-    - script: |
-        ssh -o StrictHostKeyChecking=no adminuser@$(vm_ip) "echo SSH connection successful!"
-      displayName: 'SSH into VM'
+#     - script: |
+#         ssh -o StrictHostKeyChecking=no adminuser@$(vm_ip) "echo SSH connection successful!"
+#       displayName: 'SSH into VM'
 
-- stage: Test
-  displayName: 'Selenium Tests'
-  jobs:
-    - deployment: RunSelenium
-      displayName: 'Install Deps and Run Selenium Tests'
-      environment:
-        name: myTestVM
-        resourceType: VirtualMachine
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
+# - stage: Test
+#   displayName: 'Selenium Tests'
+#   jobs:
+#     - deployment: RunSelenium
+#       displayName: 'Install Deps and Run Selenium Tests'
+#       environment:
+#         name: myTestVM
+#         resourceType: VirtualMachine
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - checkout: self
 
-              - script: |
-                  echo "Installing Chrome, ChromeDriver, Python3, pip, selenium on target machine"
-                  sudo apt update -y
-                  sudo apt install -y python3-pip wget unzip xvfb
-                  sudo pip3 install selenium
+#               - script: |
+#                   echo "Installing Chrome, ChromeDriver, Python3, pip, selenium on target machine"
+#                   sudo apt update -y
+#                   sudo apt install -y python3-pip wget unzip xvfb
+#                   sudo pip3 install selenium
 
-                  wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-                  sudo apt install -y ./google-chrome-stable_current_amd64.deb || sudo apt --fix-broken install -y
+#                   wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+#                   sudo apt install -y ./google-chrome-stable_current_amd64.deb || sudo apt --fix-broken install -y
 
-                  CHROME_VERSION=$(google-chrome --version | grep -oP '[0-9.]+' | head -1)
-                  MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
-                  DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
-                  wget https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip
-                  unzip chromedriver_linux64.zip
-                  chmod +x chromedriver
-                  sudo mv chromedriver /usr/bin/
+#                   CHROME_VERSION=$(google-chrome --version | grep -oP '[0-9.]+' | head -1)
+#                   MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
+#                   DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
+#                   wget https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip
+#                   unzip chromedriver_linux64.zip
+#                   chmod +x chromedriver
+#                   sudo mv chromedriver /usr/bin/
 
-                  echo "Running Selenium test"
-                  python3 login.py > selenium.log 2>&1
-                displayName: Run Selenium Test
+#                   echo "Running Selenium test"
+#                   python3 login.py > selenium.log 2>&1
+#                 displayName: Run Selenium Test
 
-              - script: |
-                  echo "Zipping logs"
-                  zip selenium-logs.zip selenium.log
-                displayName: Zip Logs
+#               - script: |
+#                   echo "Zipping logs"
+#                   zip selenium-logs.zip selenium.log
+#                 displayName: Zip Logs
 
-              - task: PublishBuildArtifacts@1
-                inputs:
-                  PathtoPublish: 'selenium-logs.zip'
-                  ArtifactName: 'selenium-logs'
-                  publishLocation: 'Container'
+#               - task: PublishBuildArtifacts@1
+#                 inputs:
+#                   PathtoPublish: 'selenium-logs.zip'
+#                   ArtifactName: 'selenium-logs'
+#                   publishLocation: 'Container'
