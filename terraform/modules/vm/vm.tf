@@ -39,6 +39,9 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "20_04-lts"
     version   = "latest"
   }
+
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh"))
+
 }
 
 resource "azurerm_network_interface_security_group_association" "nsg_association" {
