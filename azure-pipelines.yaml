@@ -123,10 +123,10 @@ stages:
           echo "##vso[task.setvariable variable=knownHostsEntry]$KNOWN_HOST_ENTRY"
 
     - task: InstallSSHKey@0
-      inputs:
-        sshPublicKey: '$(myPubKey)'
-        sshKeySecureFile: 'id_rsa'
-        knownHostsEntry: '$(knownHostsEntry)'
+      # inputs:
+      #   sshPublicKey: '$(myPubKey)'
+      #   sshKeySecureFile: 'id_rsa'
+      #   knownHostsEntry: '$(knownHostsEntry)'
       displayName: 'Install SSH Key'
 
     - script: |
