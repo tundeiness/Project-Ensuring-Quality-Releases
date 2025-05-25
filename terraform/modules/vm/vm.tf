@@ -40,7 +40,9 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
-  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh"))
+  # custom_data = base64encode(templatefile("../../modules/vm/cloud-init.sh"))
+  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh", {}))
+
 
 }
 
