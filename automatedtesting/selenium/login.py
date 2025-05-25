@@ -35,11 +35,30 @@ import time
 import tempfile
 
 
+
+# options = Options()
+# options.add_argument('--headless')
+# options.add_argument('--no-sandbox')
+# options.add_argument('--disable-dev-shm-usage')
+
+# driver = webdriver.Chrome(options=options)
+# driver.get('https://example.com/login')
+# # Your login logic here
+# driver.quit()
+
+
+
+
+
+
 def login_to_sauce_demo():
     """Login to the SauceDemo website and return the driver instance"""
     # Set up Chrome options
-    chrome_options = Options()
-    chrome_options.add_argument("--start-maximized")  # Start maximized
+    options = Options()
+    # chrome_options.add_argument("--start-maximized")  # Start maximized
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     
     # Set up the WebDriver
     service = Service()  # Update with your chromedriver path if needed
