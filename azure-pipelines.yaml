@@ -104,71 +104,41 @@ stages:
 #           terraform apply -auto-approve
 
 
-- stage: UI_Testing
-  displayName: 'Run Selenium UI Tests on devopsVM'
-  jobs:
-    - job: RunSeleniumTests
-      displayName: 'Run Selenium UI Tests on devopsVM'
-      pool:
-        name: myAgentPool
-      steps:
+     - stage: Deploy
+       jobs:
+          - deployment: DeploySeleniumOnVM
+            displayName: 'Deploy Selenium on VM'
+            environment:
+              name: $(vmImageName)
+              resourceType: VirtualMachine
+              tags: 'test'
 
-        # - task: UsePythonVersion@0
-        #   inputs:
-        #     versionSpec: '$(python_version)'
-        #     addToPath: true
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - task: Bash@3
+                      displayName: 'Install Chrome, Chromedriver, and Selenium'
+                      inputs:
+                        targetType: 'inline'
+                        workingDirectory: '/home/adminuser'
+                        script: |
+                          #! /bin/bash
+                          sudo apt-get update -y
+                          sudo apt-get upgrade -y
+                          sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4 chromium-browser
 
-        - task: Bash@3
-          displayName: 'Write SSH Private Key to ~/.ssh/id_rsa'
-          inputs:
-            targetType: 'inline'
-            script: |
-              mkdir -p ~/.ssh
-              printf "%s\n" "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-              chmod 600 ~/.ssh/id_rsa
+                          sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+                          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
 
-        - task: Bash@3
-          displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
-          inputs:
-            targetType: 'inline'
-            script: |
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-                sudo apt update
-                sudo apt install -y chromium-browser chromium-chromedriver python3-pip
-                pip3 install selenium
-                mkdir -p ~/selenium_logs
-              EOF
+                          sudo wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
+                          sudo unzip chromedriver_linux64.zip -d /usr/local/bin/
+                          sudo chmod +x /usr/local/bin/chromedriver
 
-        - task: Bash@3
-          displayName: 'Copy login.py to devopsVM via scp'
-          inputs:
-            targetType: 'inline'
-            script: |
-              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
+                          pip3 install selenium
 
-        - task: Bash@3
-          displayName: 'Run login.py on devopsVM'
-          inputs:
-            targetType: 'inline'
-            script: |
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-                python3 /home/adminuser/login.py > ~/selenium_logs/test_output.log 2>&1
-              EOF
-
-        - task: Bash@3
-          displayName: 'Copy logs from devopsVM to agent via scp'
-          inputs:
-            targetType: 'inline'
-            script: |
-              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/
-
-        - task: PublishBuildArtifacts@1
-          displayName: 'Publish Selenium Logs'
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-            ArtifactName: 'selenium-logs'
-
-
+                          export PATH=$PATH:/home/adminuser:/bin
+                          sudo python3 '$(Pipeline.Workspace)/$(selenium)/ui_automation.py'
 
 
 
