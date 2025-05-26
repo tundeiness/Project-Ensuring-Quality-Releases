@@ -168,7 +168,7 @@ stages:
           set -e
           
           # Run the selenium tests
-          python3 automatedtesting/selenium/login.py
+          python3 $(System.DefaultWorkingDirectory)/automatedtesting/selenium/login.py
 
     - task: Bash@3
       displayName: 'Archive Test Results'
