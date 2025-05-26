@@ -169,7 +169,8 @@ stages:
           #!/bin/bash
           set -e
           
-          # Ensure we're in the correct directory
+          # Create and navigate to working directory
+          mkdir -p $HOME/selenium-test
           cd $HOME/selenium-test
           
           # Copy test files if they exist in the pipeline workspace
@@ -186,10 +187,13 @@ stages:
         targetType: 'inline'
         script: |
           #!/bin/bash
+          # Ensure directory exists and navigate to it
+          mkdir -p $HOME/selenium-test
           cd $HOME/selenium-test
-          zip -r $HOME/selenium-test.zip .
-          # Copy to pipeline workspace for publishing
-          cp $HOME/selenium-test.zip $(System.DefaultWorkingDirectory)/
+          
+          # Create zip file and copy to pipeline workspace
+          zip -r selenium-test.zip .
+          cp selenium-test.zip $(System.DefaultWorkingDirectory)/
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Selenium Test Artifacts'
