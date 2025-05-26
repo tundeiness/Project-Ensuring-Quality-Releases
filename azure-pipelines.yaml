@@ -124,8 +124,9 @@ stages:
             targetType: 'inline'
             script: |
               mkdir -p ~/.ssh
-              printf "%s\n" "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+              echo "$admin_ssh_private_key" | awk '{print $0}' > ~/.ssh/id_rsa
               chmod 600 ~/.ssh/id_rsa
+
 
         - task: Bash@3
           displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
