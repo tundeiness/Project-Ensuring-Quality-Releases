@@ -136,20 +136,16 @@ stages:
               script: |
                 #!/bin/bash
                 set -e
-                
-                # Create working directory in user's home
+
                 mkdir -p $HOME/selenium-test
                 cd $HOME/selenium-test
-                
-                # Update system packages
+
                 sudo apt-get update
                 sudo apt-get upgrade -y
                 sudo apt-get install python3-pip unzip expect zip chromium-browser -y
-                
-                # Install Python packages
+
                 pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
-                
-                # Setup ChromeDriver
+
                 rm -rf chromedriver*
                 wget -q https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
                 unzip -q chromedriver_linux64.zip
@@ -168,32 +164,24 @@ stages:
         script: |
           #!/bin/bash
           set -e
-          
-          # Create and navigate to working directory
+
           mkdir -p $HOME/selenium-test
           cd $HOME/selenium-test
-          
-          # Install required Python packages
+
           python3 -m pip install --upgrade pip
           pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
-          
-          # Copy test files from repository
+
           cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
-          
-          # Create logs directory
-          mkdir -p logs
-          mkdir -p test-results
-          
-          # Run the selenium tests with logging and output capture
+
+          mkdir -p logs test-results
+
           echo "Starting Selenium test execution at $(date)" | tee logs/test-execution.log
-          
-          # Capture both stdout and stderr, and save exit code
+
           python3 automatedtesting/selenium/login.py 2>&1 | tee logs/selenium-test-output.log
           TEST_EXIT_CODE=${PIPESTATUS[0]}
-          
+
           echo "Test execution completed at $(date) with exit code: $TEST_EXIT_CODE" | tee -a logs/test-execution.log
-          
-          # Create a test summary
+
           echo "=== SELENIUM TEST SUMMARY ===" > test-results/test-summary.txt
           echo "Execution Date: $(date)" >> test-results/test-summary.txt
           echo "Test Script: automatedtesting/selenium/login.py" >> test-results/test-summary.txt
@@ -201,19 +189,17 @@ stages:
           echo "Log Files Generated:" >> test-results/test-summary.txt
           echo "- logs/test-execution.log" >> test-results/test-summary.txt
           echo "- logs/selenium-test-output.log" >> test-results/test-summary.txt
-          
+
           if [ $TEST_EXIT_CODE -eq 0 ]; then
             echo "Status: PASSED" >> test-results/test-summary.txt
           else
             echo "Status: FAILED" >> test-results/test-summary.txt
           fi
-          
-          # List all files created during test execution
+
           echo "" >> test-results/test-summary.txt
           echo "Files in test directory:" >> test-results/test-summary.txt
           find . -type f -newer automatedtesting/selenium/login.py 2>/dev/null >> test-results/test-summary.txt || echo "No new files created" >> test-results/test-summary.txt
-          
-          # If tests failed, still continue to archive results
+
           exit $TEST_EXIT_CODE
 
     - task: Bash@3
@@ -223,59 +209,22 @@ stages:
         targetType: 'inline'
         script: |
           #!/bin/bash
-          # Ensure directory exists and navigate to it
-          mkdir -p $HOME/selenium-test
+          set -e
+
           cd $HOME/selenium-test
-          
-          echo "Current directory: $(pwd)"
-          echo "Contents of current directory:"
-          ls -la
-          
-          # Create a comprehensive archive of test results only
+
           mkdir -p selenium-test-results
-          
-          # Copy logs and test results
-          if [ -d "logs" ]; then
-            echo "Copying logs directory..."
-            cp -r logs selenium-test-results/
-          else
-            echo "No logs directory found"
-          fi
-          
-          if [ -d "test-results" ]; then
-            echo "Copying test-results directory..."
-            cp -r test-results selenium-test-results/
-          else
-            echo "No test-results directory found"
-          fi
-          
-          # Copy any screenshots or additional files that might have been generated
-          echo "Looking for additional test artifacts..."
-          find . -name "*.png" -o -name "*.jpg" -o -name "*.html" -o -name "*.xml" -o -name "*.json" | while read file; do
-            if [[ ! "$file" =~ ^./automatedtesting/.* ]]; then
-              echo "Copying $file to results..."
-              cp "$file" selenium-test-results/ 2>/dev/null || true
-            fi
-          done
-          
-          echo "Contents of selenium-test-results:"
-          ls -la selenium-test-results/
-          
-          # Create final archive with only test results
+          [ -d "logs" ] && cp -r logs selenium-test-results/
+          [ -d "test-results" ] && cp -r test-results selenium-test-results/
+
+          find . -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.html" -o -iname "*.xml" -o -iname "*.json" \) -exec cp {} selenium-test-results/ \; 2>/dev/null || true
+
           zip -r selenium-test-results.zip selenium-test-results/
-          
-          echo "Created zip file:"
-          ls -la selenium-test-results.zip
-          
-          # Copy to pipeline workspace
           cp selenium-test-results.zip $(System.DefaultWorkingDirectory)/
-          
-          echo "Files in pipeline workspace:"
-          ls -la $(System.DefaultWorkingDirectory)/selenium-test-results.zip
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Selenium Test Artifacts'
       inputs:
-        PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test.zip'
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test-results.zip'
         ArtifactName: 'selenium-artifacts'
         publishLocation: 'Container'
