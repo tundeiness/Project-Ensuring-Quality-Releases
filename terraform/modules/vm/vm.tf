@@ -26,7 +26,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   admin_ssh_key {
     username   = var.admin_username
     public_key = file(var.admin_ssh_key_path)
-    # public_key = file(var.admin_ssh_key_path)
   }
 
   os_disk {
@@ -40,9 +39,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "20_04-lts"
     version   = "latest"
   }
-
-  # custom_data = base64encode(templatefile("../../modules/vm/cloud-init.sh"))
-  custom_data = base64encode(templatefile("${path.module}/cloud-init.sh", {}))
 
 
 }
