@@ -11,7 +11,7 @@ pool:
 variables:
   - group: azure-credentials
   - group: azure-storage-key
-  - group: ssh-secrets
+  - group: admin_ssh_private_key
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
@@ -105,8 +105,7 @@ stages:
 
 
 - stage: UI_Testing
-  # displayName: 'Run Selenium UI Tests'
-  # dependsOn: Build
+  displayName: 'Run Selenium UI Tests on devopsVM'
   jobs:
     - job: RunSeleniumTests
       displayName: 'Run Selenium UI Tests on devopsVM'
@@ -125,7 +124,7 @@ stages:
             targetType: 'inline'
             script: |
               mkdir -p ~/.ssh
-              echo "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+              printf "%s\n" "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
               chmod 600 ~/.ssh/id_rsa
 
         - task: Bash@3
@@ -141,7 +140,7 @@ stages:
               EOF
 
         - task: Bash@3
-          displayName: 'Copy login.py to devopsVM using scp'
+          displayName: 'Copy login.py to devopsVM via scp'
           inputs:
             targetType: 'inline'
             script: |
@@ -157,7 +156,7 @@ stages:
               EOF
 
         - task: Bash@3
-          displayName: 'Copy logs from devopsVM to agent'
+          displayName: 'Copy logs from devopsVM to agent via scp'
           inputs:
             targetType: 'inline'
             script: |
@@ -168,6 +167,7 @@ stages:
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)'
             ArtifactName: 'selenium-logs'
+
 
 
 
