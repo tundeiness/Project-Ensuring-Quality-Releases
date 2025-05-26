@@ -105,6 +105,7 @@ stages:
 
 
 - stage: UI_Testing
+  displayName: 'Run Selenium UI Tests on devopsVM'
   jobs:
     - job: RunSeleniumTests
       displayName: 'Run Selenium UI Tests on devopsVM'
@@ -112,213 +113,61 @@ stages:
         name: myAgentPool
       steps:
 
-      - task: UsePythonVersion@0
-        inputs:
-          versionSpec: '$(python_version)'
-          addToPath: true
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '$(python_version)'
+            addToPath: true
 
-      - task: DownloadSecureFile@1
-        name: sshKey
-        displayName: 'Download SSH Private Key'
-        inputs:
-          secureFile: 'id_rsa'
+        - task: Bash@3
+          displayName: 'Write SSH Private Key to ~/.ssh/id_rsa'
+          inputs:
+            targetType: 'inline'
+            script: |
+              mkdir -p ~/.ssh
+              printf "%s\n" "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+              chmod 600 ~/.ssh/id_rsa
 
-      - task: Bash@3
-        displayName: 'Setup SSH Private Key'
-        inputs:
-          targetType: 'inline'
-          script: |
-            # Create SSH directory with proper permissions
-            mkdir -p ~/.ssh
-            chmod 700 ~/.ssh
-            
-            # Copy the secure file to SSH directory
-            cp $(sshKey.secureFilePath) ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            
-            # Debug and validate the key
-            echo "Key file size: $(wc -c ~/.ssh/id_rsa)"
-            echo "Key file type: $(file ~/.ssh/id_rsa)"
-            echo "Key permissions: $(ls -la ~/.ssh/id_rsa)"
-            echo "Key format (first line): $(head -n 1 ~/.ssh/id_rsa)"
-            
-            # Check if key is password protected
-            if grep -q "ENCRYPTED" ~/.ssh/id_rsa; then
-              echo "❌ ERROR: SSH key appears to be password-protected (encrypted)"
-              echo "Azure DevOps pipelines cannot use encrypted SSH keys"
-              echo "Please generate a new key without a passphrase or decrypt this key"
-              exit 1
-            fi
-            
-            # Try to extract public key to test if private key is readable
-            echo "Testing if private key is readable..."
-            if ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
-              echo "✓ Successfully extracted public key from private key"
-              echo "Public key: $(cat ~/.ssh/id_rsa.pub)"
-            else
-              echo "❌ Cannot extract public key from private key"
-              echo "This usually means:"
-              echo "1. Key is password-protected/encrypted"
-              echo "2. Key format is corrupted"
-              echo "3. Key was generated with incompatible parameters"
-              
-              # Try to convert the key format as a fix attempt
-              echo "Attempting to convert key format..."
-              cp ~/.ssh/id_rsa ~/.ssh/id_rsa.backup
-              
-              # Try converting to PEM format without passphrase
-              if ssh-keygen -p -m PEM -f ~/.ssh/id_rsa.pem -N "" -P "" 2>/dev/null; then
-                echo "✓ Key converted to PEM format"
-                # Test again
-                if ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
-                  echo "✓ Public key extraction successful after conversion"
-                  echo "Public key: $(cat ~/.ssh/id_rsa.pub)"
-                else
-                  echo "❌ Key conversion didn't help - restoring original"
-                  cp ~/.ssh/id_rsa.backup ~/.ssh/id_rsa
-                  exit 1
-                fi
-              else
-                echo "❌ Key conversion failed"
-                echo "Please check your SSH key and ensure it:"
-                echo "- Is not password-protected"
-                echo "- Was generated correctly"
-                echo "- Is in a standard format"
-                exit 1
-              fi
-            fi
-            
-            echo "SSH key setup completed successfully"
+        - task: Bash@3
+          displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
+          inputs:
+            targetType: 'inline'
+            script: |
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
+                sudo apt update
+                sudo apt install -y chromium-browser chromium-chromedriver python3-pip
+                pip3 install selenium
+                mkdir -p ~/selenium_logs
+              EOF
 
-      - task: Bash@3
-        displayName: 'Test SSH Connection'
-        inputs:
-          targetType: 'inline'
-          script: |
-            # Test SSH connection with the secure file key
-            echo "Testing SSH connection..."
-            
-            # First, try a simple connection test without verbose output
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'echo "SSH connection successful"' 2>/dev/null; then
-              echo "✓ SSH connection successful!"
-            else
-              echo "Initial connection failed, trying with verbose output..."
-              
-              # Try with verbose output for debugging
-              ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'echo "SSH connection successful"' 2>&1 | head -20
-              
-              # Check if it's a key format issue by trying ssh-agent
-              echo "Trying alternative method with ssh-agent..."
-              eval $(ssh-agent -s)
-              
-              if ssh-add ~/.ssh/id_rsa 2>/dev/null; then
-                echo "Key successfully added to ssh-agent"
-                if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 adminuser@172.202.174.114 'echo "SSH via agent successful"'; then
-                  echo "✓ SSH connection successful via ssh-agent!"
-                else
-                  echo "✗ SSH connection failed even with ssh-agent"
-                  exit 1
-                fi
-              else
-                echo "Could not add key to ssh-agent"
-                
-                # Last attempt: check if the public key matches what's expected
-                echo "Extracting public key for verification..."
-                if ssh-keygen -y -f ~/.ssh/id_rsa 2>/dev/null; then
-                  echo "Public key extracted successfully"
-                else
-                  echo "Cannot extract public key from private key"
-                fi
-                
-                exit 1
-              fi
-            fi
+        - task: Bash@3
+          displayName: 'Copy login.py to devopsVM via scp'
+          inputs:
+            targetType: 'inline'
+            script: |
+              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
 
-      - task: Bash@3
-        displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
-        inputs:
-          targetType: 'inline'
-          script: |
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-              # Update package list
-              sudo apt update
-              
-              # Install Chrome and dependencies
-              sudo apt install -y chromium-browser chromium-chromedriver python3-pip
-              
-              # Install Selenium
-              pip3 install selenium
-              
-              # Create logs directory
-              mkdir -p ~/selenium_logs
-              
-              # Verify installations
-              chromium-browser --version
-              chromedriver --version
-              python3 -c "import selenium; print(f'Selenium version: {selenium.__version__}')"
-            EOF
+        - task: Bash@3
+          displayName: 'Run login.py on devopsVM'
+          inputs:
+            targetType: 'inline'
+            script: |
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
+                python3 /home/adminuser/login.py > ~/selenium_logs/test_output.log 2>&1
+              EOF
 
-      - task: Bash@3
-        displayName: 'Copy login.py to devopsVM using scp'
-        inputs:
-          targetType: 'inline'
-          script: |
-            # Verify source file exists
-            if [ ! -f "$(projectRoot)/automatedtesting/selenium/login.py" ]; then
-              echo "Source file not found: $(projectRoot)/automatedtesting/selenium/login.py"
-              exit 1
-            fi
-            
-            # Copy file with error handling
-            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/ || {
-              echo "SCP failed. Checking connectivity..."
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 'pwd'
-              exit 1
-            }
+        - task: Bash@3
+          displayName: 'Copy logs from devopsVM to agent via scp'
+          inputs:
+            targetType: 'inline'
+            script: |
+              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/
 
-      - task: Bash@3
-        displayName: 'Run login.py on devopsVM'
-        inputs:
-          targetType: 'inline'
-          script: |
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-              # Verify file exists
-              if [ ! -f "/home/adminuser/login.py" ]; then
-                echo "login.py not found on remote server"
-                exit 1
-              fi
-              
-              # Run the test with proper logging
-              echo "Starting Selenium test..."
-              cd /home/adminuser
-              python3 login.py > ~/selenium_logs/test_output.log 2>&1
-              
-              # Check if test completed
-              echo "Test execution completed. Log file contents:"
-              cat ~/selenium_logs/test_output.log
-            EOF
+        - task: PublishBuildArtifacts@1
+          displayName: 'Publish Selenium Logs'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'selenium-logs'
 
-      - task: Bash@3
-        displayName: 'Copy logs from devopsVM to agent'
-        inputs:
-          targetType: 'inline'
-          script: |
-            # Ensure artifact staging directory exists
-            mkdir -p $(Build.ArtifactStagingDirectory)
-            
-            # Copy logs with error handling
-            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/ || {
-              echo "Failed to copy log file. Checking if it exists on remote server..."
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 'ls -la ~/selenium_logs/'
-              exit 1
-            }
-
-      - task: PublishBuildArtifacts@1
-        displayName: 'Publish Selenium Logs'
-        inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-          ArtifactName: 'selenium-logs'
-        condition: always() # Publish logs even if previous steps failed
 
 
 
