@@ -57,7 +57,7 @@ stages:
         script: |
           cd $(System.DefaultWorkingDirectory)/terraform/environments/test
           terraform init \
-            -backend-config="storage_account_name=tfstate64f6a8fe539a" \
+            -backend-config="storage_account_name=tfstatecc9ded810294" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate" \
             -backend-config="resource_group_name=Azuredevops" \
