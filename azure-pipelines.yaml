@@ -105,7 +105,6 @@ stages:
 
 
 - stage: UI_Testing
-  displayName: 'Run Selenium UI Tests on devopsVM'
   jobs:
     - job: RunSeleniumTests
       displayName: 'Run Selenium UI Tests on devopsVM'
@@ -113,61 +112,61 @@ stages:
         name: myAgentPool
       steps:
 
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '$(python_version)'
-            addToPath: true
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '$(python_version)'
+          addToPath: true
 
-        - task: Bash@3
-          displayName: 'Write SSH Private Key to ~/.ssh/id_rsa'
-          inputs:
-            targetType: 'inline'
-            script: |
-              mkdir -p ~/.ssh
-              echo "$ADMIN_SSH_PRIVATE_KEY" | awk '{print $0}' > ~/.ssh/id_rsa
-              chmod 600 ~/.ssh/id_rsa
+      - task: Bash@3
+        displayName: 'Write SSH Private Key to ~/.ssh/id_rsa.pem'
+        inputs:
+          targetType: 'inline'
+          script: |
+            mkdir -p ~/.ssh
+            printf '%s\n' "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa.pem
+            chmod 600 ~/.ssh/id_rsa.pem
 
+      - task: Bash@3
+        displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
+        inputs:
+          targetType: 'inline'
+          script: |
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+              sudo apt update
+              sudo apt install -y chromium-browser chromium-chromedriver python3-pip
+              pip3 install selenium
+              mkdir -p ~/selenium_logs
+            EOF
 
-        - task: Bash@3
-          displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
-          inputs:
-            targetType: 'inline'
-            script: |
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-                sudo apt update
-                sudo apt install -y chromium-browser chromium-chromedriver python3-pip
-                pip3 install selenium
-                mkdir -p ~/selenium_logs
-              EOF
+      - task: Bash@3
+        displayName: 'Copy login.py to devopsVM using scp'
+        inputs:
+          targetType: 'inline'
+          script: |
+            scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
 
-        - task: Bash@3
-          displayName: 'Copy login.py to devopsVM via scp'
-          inputs:
-            targetType: 'inline'
-            script: |
-              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
+      - task: Bash@3
+        displayName: 'Run login.py on devopsVM'
+        inputs:
+          targetType: 'inline'
+          script: |
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+              python3 /home/adminuser/login.py > ~/selenium_logs/test_output.log 2>&1
+            EOF
 
-        - task: Bash@3
-          displayName: 'Run login.py on devopsVM'
-          inputs:
-            targetType: 'inline'
-            script: |
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
-                python3 /home/adminuser/login.py > ~/selenium_logs/test_output.log 2>&1
-              EOF
+      - task: Bash@3
+        displayName: 'Copy logs from devopsVM to agent'
+        inputs:
+          targetType: 'inline'
+          script: |
+            scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/
 
-        - task: Bash@3
-          displayName: 'Copy logs from devopsVM to agent via scp'
-          inputs:
-            targetType: 'inline'
-            script: |
-              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Selenium Logs'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'selenium-logs'
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'Publish Selenium Logs'
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-            ArtifactName: 'selenium-logs'
 
 
 
