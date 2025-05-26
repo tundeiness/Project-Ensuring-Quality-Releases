@@ -113,10 +113,10 @@ stages:
         name: myAgentPool
       steps:
 
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '$(python_version)'
-            addToPath: true
+        # - task: UsePythonVersion@0
+        #   inputs:
+        #     versionSpec: '$(python_version)'
+        #     addToPath: true
 
         - task: Bash@3
           displayName: 'Write SSH Private Key to ~/.ssh/id_rsa'
