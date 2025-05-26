@@ -124,7 +124,7 @@ stages:
             targetType: 'inline'
             script: |
               mkdir -p ~/.ssh
-              echo "$admin_ssh_private_key" | awk '{print $0}' > ~/.ssh/id_rsa
+              echo "$ADMIN_SSH_PRIVATE_KEY" | awk '{print $0}' > ~/.ssh/id_rsa
               chmod 600 ~/.ssh/id_rsa
 
 
