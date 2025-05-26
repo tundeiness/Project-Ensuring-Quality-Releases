@@ -227,28 +227,51 @@ stages:
           mkdir -p $HOME/selenium-test
           cd $HOME/selenium-test
           
+          echo "Current directory: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          
           # Create a comprehensive archive of test results only
           mkdir -p selenium-test-results
           
           # Copy logs and test results
           if [ -d "logs" ]; then
+            echo "Copying logs directory..."
             cp -r logs selenium-test-results/
+          else
+            echo "No logs directory found"
           fi
           
           if [ -d "test-results" ]; then
+            echo "Copying test-results directory..."
             cp -r test-results selenium-test-results/
+          else
+            echo "No test-results directory found"
           fi
           
           # Copy any screenshots or additional files that might have been generated
+          echo "Looking for additional test artifacts..."
           find . -name "*.png" -o -name "*.jpg" -o -name "*.html" -o -name "*.xml" -o -name "*.json" | while read file; do
             if [[ ! "$file" =~ ^./automatedtesting/.* ]]; then
+              echo "Copying $file to results..."
               cp "$file" selenium-test-results/ 2>/dev/null || true
             fi
           done
           
+          echo "Contents of selenium-test-results:"
+          ls -la selenium-test-results/
+          
           # Create final archive with only test results
           zip -r selenium-test-results.zip selenium-test-results/
+          
+          echo "Created zip file:"
+          ls -la selenium-test-results.zip
+          
+          # Copy to pipeline workspace
           cp selenium-test-results.zip $(System.DefaultWorkingDirectory)/
+          
+          echo "Files in pipeline workspace:"
+          ls -la $(System.DefaultWorkingDirectory)/selenium-test-results.zip
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Selenium Test Artifacts'
