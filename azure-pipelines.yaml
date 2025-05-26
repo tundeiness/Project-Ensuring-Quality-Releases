@@ -119,7 +119,8 @@ stages:
                       displayName: 'Install Chrome, Chromedriver, and Selenium'
                       inputs:
                         targetType: 'inline'
-                        workingDirectory: '/home/adminuser'
+                        workingDirectory: '$(Pipeline.Workspace)'
+
                         script: |
                           #! /bin/bash
                           sudo apt-get update -y
@@ -135,7 +136,7 @@ stages:
 
                           pip3 install selenium
 
-                          export PATH=$PATH:/home/adminuser:/bin
+                          # export PATH=$PATH:/home/adminuser:/bin
                           sudo python3 '$(Pipeline.Workspace)/$(selenium)/ui_automation.py'
 
 
