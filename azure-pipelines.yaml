@@ -80,7 +80,7 @@ stages:
           client_id           = "$ARM_CLIENT_ID"
           client_secret       = "$ARM_CLIENT_SECRET"
           tenant_id           = "$ARM_TENANT_ID"
-          location            = "South Central US"
+          location            = "East US"
           resource_group      = "Azuredevops"
           application_type    = "myWebApp"
           virtual_network_name = "devopsnet"
