@@ -121,10 +121,11 @@ stages:
   dependsOn: Build
   jobs:
   - deployment: VirtualMachineDeploy
-    displayName: 'Deploy Selenium on Virtual Machine'
+    displayName: 'Install Selenium on Virtual Machine'
     environment:
       name: 'devopsVM'
       resourceType: VirtualMachine
+      tags: 'test'
     strategy:
       runOnce:
         deploy:
@@ -178,7 +179,7 @@ stages:
           pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
           
           # Copy test files from repository
-          cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
+          cp -r $(System.DefaultWorkingDirectory)/automatedtesting/selenium/login.py .
           
           # Run the selenium tests
           python3 automatedtesting/selenium/login.py
