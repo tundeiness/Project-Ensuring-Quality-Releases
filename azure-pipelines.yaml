@@ -140,13 +140,12 @@ stages:
                 mkdir -p ~/selenium_logs
               EOF
 
-        - task: CopyFilesOverSSH@0
-          displayName: 'Copy login.py to devopsVM'
+        - task: Bash@3
+          displayName: 'Copy login.py to devopsVM using scp'
           inputs:
-            sshEndpoint: 'devopsVM-SSH'  # Define in Service Connections
-            sourceFolder: '$(projectRoot)/automatedtesting/selenium'
-            contents: 'login.py'
-            targetFolder: '/home/adminuser'
+            targetType: 'inline'
+            script: |
+              scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
 
         - task: Bash@3
           displayName: 'Run login.py on devopsVM'
@@ -169,6 +168,7 @@ stages:
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)'
             ArtifactName: 'selenium-logs'
+
 
 
     # - task: Bash@3
