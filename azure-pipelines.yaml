@@ -126,44 +126,35 @@ stages:
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
             
-            # Write the private key with proper line endings
-            echo -e "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa_temp
+            # Check if the environment variable is properly set
+            if [ -z "$ADMIN_SSH_PRIVATE_KEY" ]; then
+              echo "ERROR: ADMIN_SSH_PRIVATE_KEY environment variable is not set"
+              exit 1
+            fi
             
-            # Clean up the key format (remove any Windows line endings, extra spaces)
-            sed 's/\r$//' ~/.ssh/id_rsa_temp > ~/.ssh/id_rsa.pem
-            rm ~/.ssh/id_rsa_temp
+            echo "Environment variable length: ${#ADMIN_SSH_PRIVATE_KEY}"
+            
+            # Write the private key properly (use printf to handle newlines correctly)
+            printf '%s\n' "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa.pem
             
             # Set correct permissions
             chmod 600 ~/.ssh/id_rsa.pem
             
             # Debug key format
             echo "Key file size: $(wc -c ~/.ssh/id_rsa.pem)"
+            echo "Key file type: $(file ~/.ssh/id_rsa.pem)"
             echo "First line: $(head -n 1 ~/.ssh/id_rsa.pem)"
             echo "Last line: $(tail -n 1 ~/.ssh/id_rsa.pem)"
             
-            # Try to validate the key
-            if ssh-keygen -l -f ~/.ssh/id_rsa.pem; then
-              echo "Key validation successful"
+            # Validate the key format
+            if ssh-keygen -l -f ~/.ssh/id_rsa.pem 2>/dev/null; then
+              echo "✓ SSH key validation successful"
             else
-              echo "Key validation failed, trying to fix format..."
-              
-              # Try alternative key writing method
-              cat > ~/.ssh/id_rsa.pem << 'KEY_EOF'
-            $ADMIN_SSH_PRIVATE_KEY
-            KEY_EOF
-              chmod 600 ~/.ssh/id_rsa.pem
-              
-              # Try validation again
-              ssh-keygen -l -f ~/.ssh/id_rsa.pem || {
-                echo "Key is still invalid. Checking if it needs conversion..."
-                
-                # Try to convert the key format
-                cp ~/.ssh/id_rsa.pem ~/.ssh/id_rsa.pem.backup
-                ssh-keygen -p -m OpenSSH -f ~/.ssh/id_rsa.pem -N "" -P "" || {
-                  echo "Key conversion failed, reverting to backup"
-                  cp ~/.ssh/id_rsa.pem.backup ~/.ssh/id_rsa.pem
-                }
-              }
+              echo "✗ SSH key validation failed"
+              echo "Key content preview (first 100 chars):"
+              head -c 100 ~/.ssh/id_rsa.pem
+              echo ""
+              exit 1
             fi
         env:
           ADMIN_SSH_PRIVATE_KEY: $(ADMIN_SSH_PRIVATE_KEY)
@@ -173,16 +164,48 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            # Test SSH connection with verbose output
-            echo "Testing SSH connection..."
-            ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'echo "SSH connection successful"' || {
-              echo "SSH connection failed. Checking key details:"
-              ls -la ~/.ssh/id_rsa.pem
-              file ~/.ssh/id_rsa.pem
-              echo "First few lines of key:"
-              head -n 3 ~/.ssh/id_rsa.pem
-              exit 1
-            }
+            # First try: Use the key as-is
+            echo "Testing SSH connection with current key..."
+            if ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'echo "SSH connection successful"'; then
+              echo "SSH connection successful with current key"
+            else
+              echo "SSH connection failed with current key. Trying alternative methods..."
+              
+              # Try with ssh-agent
+              eval $(ssh-agent -s)
+              if ssh-add ~/.ssh/id_rsa.pem 2>/dev/null; then
+                echo "Key added to ssh-agent successfully"
+                ssh -o StrictHostKeyChecking=no -A adminuser@172.202.174.114 'echo "SSH via agent successful"' || {
+                  echo "SSH via agent also failed"
+                  exit 1
+                }
+              else
+                echo "Could not add key to ssh-agent"
+                
+                # Last resort: try to recreate the key from the variable
+                echo "Attempting to recreate key from variable..."
+                printf '%s\n' "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa_new.pem
+                chmod 600 ~/.ssh/id_rsa_new.pem
+                
+                if ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa_new.pem adminuser@172.202.174.114 'echo "SSH with recreated key successful"'; then
+                  echo "Success with recreated key, replacing original"
+                  mv ~/.ssh/id_rsa_new.pem ~/.ssh/id_rsa.pem
+                else
+                  echo "All SSH connection attempts failed"
+                  # Show detailed key information for debugging
+                  echo "=== KEY DEBUG INFO ==="
+                  echo "Original key info:"
+                  ls -la ~/.ssh/id_rsa.pem
+                  xxd ~/.ssh/id_rsa.pem | head -n 5
+                  echo "New key info:"
+                  ls -la ~/.ssh/id_rsa_new.pem
+                  xxd ~/.ssh/id_rsa_new.pem | head -n 5
+                  exit 1
+                fi
+              fi
+            fi
+        env:
+          ADMIN_SSH_PRIVATE_KEY: $(ADMIN_SSH_PRIVATE_KEY)
 
       - task: Bash@3
         displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
