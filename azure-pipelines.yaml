@@ -108,9 +108,8 @@ stages:
        jobs:
           - deployment: DeploySeleniumOnVM
             displayName: 'Deploy Selenium on VM'
-            environment:
-              name: $(vmImageName)
-              resourceType: VirtualMachine
+            environment: devopsVM
+            # tags: 'test'
 
             strategy:
               runOnce:
