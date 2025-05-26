@@ -22,12 +22,10 @@ variables:
     value: 'test'
   - name: vmImageName
     value: 'devopsVM'
-  - name: org_url
-    value: 'https://dev.azure.com/odluser281341/' 
+ 
 
 stages:
 - stage: Build
-  displayName: 'Provision Infrastructure'
   jobs:
   - job: BuildInfrastructure
     displayName: 'Provisioning IaC'
@@ -59,7 +57,7 @@ stages:
         script: |
           cd $(System.DefaultWorkingDirectory)/terraform/environments/test
           terraform init \
-            -backend-config="storage_account_name=tfstate4fe117a2b651" \
+            -backend-config="storage_account_name=tfstate64f6a8fe539a" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=test.terraform.tfstate" \
             -backend-config="resource_group_name=Azuredevops" \
@@ -103,25 +101,25 @@ stages:
         targetType: 'inline'
         script: |
           cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          terraform apply -var-file=terraform.tfvars -var="org_url=$(org_url)" -auto-approve
+          terraform apply -auto-approve
 
 
-    - task: Bash@3
-      displayName: 'Set vm_ip Variable'
-      inputs:
-        targetType: 'inline'
-        script: |
-          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          VM_IP=$(terraform output -raw vm_public_ip)
-          echo "##vso[task.setvariable variable=vm_ip]$VM_IP"
+    # - task: Bash@3
+    #   displayName: 'Set vm_ip Variable'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+    #       VM_IP=$(terraform output -raw vm_public_ip)
+    #       echo "##vso[task.setvariable variable=vm_ip]$VM_IP"
 
-    - task: Bash@3
-      displayName: 'Generate SSH known_hosts Entry'
-      inputs:
-        targetType: 'inline'
-        script: |
-          KNOWN_HOST_ENTRY=$(ssh-keyscan -t rsa $(vm_ip) 2>/dev/null)
-          echo "##vso[task.setvariable variable=knownHostsEntry]$KNOWN_HOST_ENTRY"
+    # - task: Bash@3
+    #   displayName: 'Generate SSH known_hosts Entry'
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       KNOWN_HOST_ENTRY=$(ssh-keyscan -t rsa $(vm_ip) 2>/dev/null)
+    #       echo "##vso[task.setvariable variable=knownHostsEntry]$KNOWN_HOST_ENTRY"
 
 # Uncomment and use these in next stage once provisioning is successful
 # - stage: Test
