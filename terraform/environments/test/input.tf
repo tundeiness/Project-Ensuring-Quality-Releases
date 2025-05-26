@@ -35,8 +35,3 @@ variable "vm_name" {
   type = string
 }
 
-variable "org_url"{}
-
-variable "azdo_pat"{}
-
-variable "env_name" {}
