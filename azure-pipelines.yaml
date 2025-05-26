@@ -11,15 +11,12 @@ pool:
 variables:
   - group: azure-credentials
   - group: azure-storage-key
-  - group: ssh-secrets
   - name: python_version
     value: '3.8.10'
   - name: azureServiceConnectionId
     value: 'ServiceConnex'
   - name: projectRoot
     value: '$(System.DefaultWorkingDirectory)'
-  - name: environmentName
-    value: 'test'
   - name: vmImageName
     value: 'devopsVM'
  
@@ -44,6 +41,21 @@ stages:
         script: |
           echo "$ADMIN_SSH_PUBLIC_KEY" > $(System.DefaultWorkingDirectory)/terraform/environments/test/id_rsa.pub
           chmod 644 $(System.DefaultWorkingDirectory)/terraform/environments/test/id_rsa.pub
+
+    - task: DownloadSecureFile@1
+      name: sshkey
+      displayName: 'Download SSH Private Key'
+      inputs:
+        secureFile: 'id_rsa'  # Must match the name of your uploaded secure file
+
+    - task: Bash@3
+      displayName: "Install SSH Private Key"
+      inputs:
+        targetType: 'inline'
+        script: |
+          mkdir -p ~/.ssh
+          cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
+          chmod 400 ~/.ssh/id_rsa
 
     - task: Bash@3
       displayName: 'Terraform Init'
@@ -103,61 +115,3 @@ stages:
           cd $(System.DefaultWorkingDirectory)/terraform/environments/test
           terraform apply -auto-approve
 
-
-    # - task: Bash@3
-    #   displayName: 'Set vm_ip Variable'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-    #       VM_IP=$(terraform output -raw vm_public_ip)
-    #       echo "##vso[task.setvariable variable=vm_ip]$VM_IP"
-
-    # - task: Bash@3
-    #   displayName: 'Generate SSH known_hosts Entry'
-    #   inputs:
-    #     targetType: 'inline'
-    #     script: |
-    #       KNOWN_HOST_ENTRY=$(ssh-keyscan -t rsa $(vm_ip) 2>/dev/null)
-    #       echo "##vso[task.setvariable variable=knownHostsEntry]$KNOWN_HOST_ENTRY"
-
-# Uncomment and use these in next stage once provisioning is successful
-# - stage: Test
-#   displayName: 'Selenium Tests'
-#   jobs:
-#     - deployment: RunSelenium
-#       displayName: 'Install Deps and Run Selenium Tests'
-#       environment:
-#         name: myTestVM
-#         resourceType: VirtualMachine
-#       strategy:
-#         runOnce:
-#           deploy:
-#             steps:
-#               - checkout: self
-#               - script: |
-#                   echo "Installing Chrome, ChromeDriver, Python3, pip, selenium on target machine"
-#                   sudo apt update -y
-#                   sudo apt install -y python3-pip wget unzip xvfb
-#                   sudo pip3 install selenium
-#                   wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-#                   sudo apt install -y ./google-chrome-stable_current_amd64.deb || sudo apt --fix-broken install -y
-#                   CHROME_VERSION=$(google-chrome --version | grep -oP '[0-9.]+' | head -1)
-#                   MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
-#                   DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
-#                   wget https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip
-#                   unzip chromedriver_linux64.zip
-#                   chmod +x chromedriver
-#                   sudo mv chromedriver /usr/bin/
-#                   echo "Running Selenium test"
-#                   python3 login.py > selenium.log 2>&1
-#                 displayName: Run Selenium Test
-#               - script: |
-#                   echo "Zipping logs"
-#                   zip selenium-logs.zip selenium.log
-#                 displayName: Zip Logs
-#               - task: PublishBuildArtifacts@1
-#                 inputs:
-#                   PathtoPublish: 'selenium-logs.zip'
-#                   ArtifactName: 'selenium-logs'
-#                   publishLocation: 'Container'
