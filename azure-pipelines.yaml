@@ -137,9 +137,9 @@ stages:
                 #!/bin/bash
                 set -e
                 
-                # Create working directory
-                mkdir -p /home/selenium-test
-                cd /home/selenium-test
+                # Create working directory in user's home
+                mkdir -p $HOME/selenium-test
+                cd $HOME/selenium-test
                 
                 # Update system packages
                 sudo apt-get update
@@ -150,7 +150,7 @@ stages:
                 pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
                 
                 # Setup ChromeDriver
-                sudo rm -rf chromedriver*
+                rm -rf chromedriver*
                 wget -q https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
                 unzip -q chromedriver_linux64.zip
                 sudo mv chromedriver /usr/bin/
@@ -170,7 +170,7 @@ stages:
           set -e
           
           # Ensure we're in the correct directory
-          cd /home/selenium-test
+          cd $HOME/selenium-test
           
           # Copy test files if they exist in the pipeline workspace
           if [ -d "$(System.DefaultWorkingDirectory)/automatedtesting" ]; then
@@ -186,12 +186,14 @@ stages:
         targetType: 'inline'
         script: |
           #!/bin/bash
-          cd /home/selenium-test
-          zip -r selenium-test.zip .
+          cd $HOME/selenium-test
+          zip -r $HOME/selenium-test.zip .
+          # Copy to pipeline workspace for publishing
+          cp $HOME/selenium-test.zip $(System.DefaultWorkingDirectory)/
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Selenium Test Artifacts'
       inputs:
-        PathtoPublish: '/home/selenium-test/selenium-test.zip'
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test.zip'
         ArtifactName: 'selenium-artifacts'
         publishLocation: 'Container'
