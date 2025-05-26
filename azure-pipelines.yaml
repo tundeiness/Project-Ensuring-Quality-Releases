@@ -133,10 +133,13 @@ stages:
             displayName: 'Configure Selenium on VM'
             inputs:
               targetType: 'inline'
-              workingDirectory: '/home/selenium-test/'
               script: |
                 #!/bin/bash
                 set -e
+                
+                # Create working directory
+                mkdir -p /home/selenium-test
+                cd /home/selenium-test
                 
                 # Update system packages
                 sudo apt-get update
@@ -162,21 +165,28 @@ stages:
       displayName: 'Execute Selenium Test Suite'
       inputs:
         targetType: 'inline'
-        workingDirectory: '/home/selenium-test/'
         script: |
           #!/bin/bash
           set -e
           
+          # Ensure we're in the correct directory
+          cd /home/selenium-test
+          
+          # Copy test files if they exist in the pipeline workspace
+          if [ -d "$(System.DefaultWorkingDirectory)/automatedtesting" ]; then
+            cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
+          fi
+          
           # Run the selenium tests
-          python3 $(System.DefaultWorkingDirectory)/automatedtesting/selenium/login.py
+          python3 automatedtesting/selenium/login.py
 
     - task: Bash@3
       displayName: 'Archive Test Results'
       inputs:
         targetType: 'inline'
-        workingDirectory: '/home/selenium-test/'
         script: |
           #!/bin/bash
+          cd /home/selenium-test
           zip -r selenium-test.zip .
 
     - task: PublishBuildArtifacts@1
