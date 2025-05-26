@@ -121,7 +121,7 @@ stages:
         name: sshKey
         displayName: 'Download SSH Private Key'
         inputs:
-          secureFile: 'id_rsa.pem'
+          secureFile: 'id_rsa'
 
       - task: Bash@3
         displayName: 'Setup SSH Private Key'
@@ -133,17 +133,17 @@ stages:
             chmod 700 ~/.ssh
             
             # Copy the secure file to SSH directory
-            cp $(sshKey.secureFilePath) ~/.ssh/id_rsa.pem
-            chmod 600 ~/.ssh/id_rsa.pem
+            cp $(sshKey.secureFilePath) ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
             
             # Debug and validate the key
-            echo "Key file size: $(wc -c ~/.ssh/id_rsa.pem)"
-            echo "Key file type: $(file ~/.ssh/id_rsa.pem)"
-            echo "Key permissions: $(ls -la ~/.ssh/id_rsa.pem)"
-            echo "Key format (first line): $(head -n 1 ~/.ssh/id_rsa.pem)"
+            echo "Key file size: $(wc -c ~/.ssh/id_rsa)"
+            echo "Key file type: $(file ~/.ssh/id_rsa)"
+            echo "Key permissions: $(ls -la ~/.ssh/id_rsa)"
+            echo "Key format (first line): $(head -n 1 ~/.ssh/id_rsa)"
             
             # Check if key is password protected
-            if grep -q "ENCRYPTED" ~/.ssh/id_rsa.pem; then
+            if grep -q "ENCRYPTED" ~/.ssh/id_rsa; then
               echo "❌ ERROR: SSH key appears to be password-protected (encrypted)"
               echo "Azure DevOps pipelines cannot use encrypted SSH keys"
               echo "Please generate a new key without a passphrase or decrypt this key"
@@ -152,7 +152,7 @@ stages:
             
             # Try to extract public key to test if private key is readable
             echo "Testing if private key is readable..."
-            if ssh-keygen -y -f ~/.ssh/id_rsa.pem > ~/.ssh/id_rsa.pub 2>/dev/null; then
+            if ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
               echo "✓ Successfully extracted public key from private key"
               echo "Public key: $(cat ~/.ssh/id_rsa.pub)"
             else
@@ -164,18 +164,18 @@ stages:
               
               # Try to convert the key format as a fix attempt
               echo "Attempting to convert key format..."
-              cp ~/.ssh/id_rsa.pem ~/.ssh/id_rsa.pem.backup
+              cp ~/.ssh/id_rsa ~/.ssh/id_rsa.backup
               
               # Try converting to PEM format without passphrase
               if ssh-keygen -p -m PEM -f ~/.ssh/id_rsa.pem -N "" -P "" 2>/dev/null; then
                 echo "✓ Key converted to PEM format"
                 # Test again
-                if ssh-keygen -y -f ~/.ssh/id_rsa.pem > ~/.ssh/id_rsa.pub 2>/dev/null; then
+                if ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub 2>/dev/null; then
                   echo "✓ Public key extraction successful after conversion"
                   echo "Public key: $(cat ~/.ssh/id_rsa.pub)"
                 else
                   echo "❌ Key conversion didn't help - restoring original"
-                  cp ~/.ssh/id_rsa.pem.backup ~/.ssh/id_rsa.pem
+                  cp ~/.ssh/id_rsa.backup ~/.ssh/id_rsa
                   exit 1
                 fi
               else
@@ -211,7 +211,7 @@ stages:
               echo "Trying alternative method with ssh-agent..."
               eval $(ssh-agent -s)
               
-              if ssh-add ~/.ssh/id_rsa.pem 2>/dev/null; then
+              if ssh-add ~/.ssh/id_rsa 2>/dev/null; then
                 echo "Key successfully added to ssh-agent"
                 if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 adminuser@172.202.174.114 'echo "SSH via agent successful"'; then
                   echo "✓ SSH connection successful via ssh-agent!"
@@ -224,7 +224,7 @@ stages:
                 
                 # Last attempt: check if the public key matches what's expected
                 echo "Extracting public key for verification..."
-                if ssh-keygen -y -f ~/.ssh/id_rsa.pem 2>/dev/null; then
+                if ssh-keygen -y -f ~/.ssh/id_rsa 2>/dev/null; then
                   echo "Public key extracted successfully"
                 else
                   echo "Cannot extract public key from private key"
@@ -239,7 +239,7 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
               # Update package list
               sudo apt update
               
@@ -270,9 +270,9 @@ stages:
             fi
             
             # Copy file with error handling
-            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/ || {
+            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/ || {
               echo "SCP failed. Checking connectivity..."
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'pwd'
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 'pwd'
               exit 1
             }
 
@@ -281,7 +281,7 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114 << 'EOF'
               # Verify file exists
               if [ ! -f "/home/adminuser/login.py" ]; then
                 echo "login.py not found on remote server"
@@ -307,9 +307,9 @@ stages:
             mkdir -p $(Build.ArtifactStagingDirectory)
             
             # Copy logs with error handling
-            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/ || {
+            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/ || {
               echo "Failed to copy log file. Checking if it exists on remote server..."
-              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'ls -la ~/selenium_logs/'
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa adminuser@172.202.174.114 'ls -la ~/selenium_logs/'
               exit 1
             }
 
