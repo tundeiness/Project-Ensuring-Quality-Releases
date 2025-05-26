@@ -118,24 +118,67 @@ stages:
           addToPath: true
 
       - task: Bash@3
-        displayName: 'Write SSH Private Key to ~/.ssh/id_rsa.pem'
+        displayName: 'Setup SSH Private Key'
         inputs:
           targetType: 'inline'
           script: |
+            # Create SSH directory with proper permissions
             mkdir -p ~/.ssh
-            printf '%s\n' "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa.pem
+            chmod 700 ~/.ssh
+            
+            # Write the private key (handle potential formatting issues)
+            echo "$ADMIN_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa.pem
+            
+            # Set correct permissions
             chmod 600 ~/.ssh/id_rsa.pem
+            
+            # Verify key format
+            echo "Checking SSH key format:"
+            head -n 1 ~/.ssh/id_rsa.pem
+            
+            # Test key validity
+            ssh-keygen -l -f ~/.ssh/id_rsa.pem || echo "Key format verification failed"
+        env:
+          ADMIN_SSH_PRIVATE_KEY: $(ADMIN_SSH_PRIVATE_KEY)
+
+      - task: Bash@3
+        displayName: 'Test SSH Connection'
+        inputs:
+          targetType: 'inline'
+          script: |
+            # Test SSH connection with verbose output
+            echo "Testing SSH connection..."
+            ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'echo "SSH connection successful"' || {
+              echo "SSH connection failed. Checking key details:"
+              ls -la ~/.ssh/id_rsa.pem
+              file ~/.ssh/id_rsa.pem
+              echo "First few lines of key:"
+              head -n 3 ~/.ssh/id_rsa.pem
+              exit 1
+            }
 
       - task: Bash@3
         displayName: 'Install Chrome, ChromeDriver, and Selenium on VM'
         inputs:
           targetType: 'inline'
           script: |
-            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+              # Update package list
               sudo apt update
+              
+              # Install Chrome and dependencies
               sudo apt install -y chromium-browser chromium-chromedriver python3-pip
+              
+              # Install Selenium
               pip3 install selenium
+              
+              # Create logs directory
               mkdir -p ~/selenium_logs
+              
+              # Verify installations
+              chromium-browser --version
+              chromedriver --version
+              python3 -c "import selenium; print(f'Selenium version: {selenium.__version__}')"
             EOF
 
       - task: Bash@3
@@ -143,15 +186,39 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/
+            # Verify source file exists
+            if [ ! -f "$(projectRoot)/automatedtesting/selenium/login.py" ]; then
+              echo "Source file not found: $(projectRoot)/automatedtesting/selenium/login.py"
+              exit 1
+            fi
+            
+            # Copy file with error handling
+            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem $(projectRoot)/automatedtesting/selenium/login.py adminuser@172.202.174.114:/home/adminuser/ || {
+              echo "SCP failed. Checking connectivity..."
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'pwd'
+              exit 1
+            }
 
       - task: Bash@3
         displayName: 'Run login.py on devopsVM'
         inputs:
           targetType: 'inline'
           script: |
-            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
-              python3 /home/adminuser/login.py > ~/selenium_logs/test_output.log 2>&1
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 << 'EOF'
+              # Verify file exists
+              if [ ! -f "/home/adminuser/login.py" ]; then
+                echo "login.py not found on remote server"
+                exit 1
+              fi
+              
+              # Run the test with proper logging
+              echo "Starting Selenium test..."
+              cd /home/adminuser
+              python3 login.py > ~/selenium_logs/test_output.log 2>&1
+              
+              # Check if test completed
+              echo "Test execution completed. Log file contents:"
+              cat ~/selenium_logs/test_output.log
             EOF
 
       - task: Bash@3
@@ -159,13 +226,22 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/
+            # Ensure artifact staging directory exists
+            mkdir -p $(Build.ArtifactStagingDirectory)
+            
+            # Copy logs with error handling
+            scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114:/home/adminuser/selenium_logs/test_output.log $(Build.ArtifactStagingDirectory)/ || {
+              echo "Failed to copy log file. Checking if it exists on remote server..."
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa.pem adminuser@172.202.174.114 'ls -la ~/selenium_logs/'
+              exit 1
+            }
 
       - task: PublishBuildArtifacts@1
         displayName: 'Publish Selenium Logs'
         inputs:
           PathtoPublish: '$(Build.ArtifactStagingDirectory)'
           ArtifactName: 'selenium-logs'
+        condition: always() # Publish logs even if previous steps failed
 
 
 
