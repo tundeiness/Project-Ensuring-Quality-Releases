@@ -137,7 +137,7 @@ stages:
                           pip3 install selenium
 
                           # export PATH=$PATH:/home/adminuser:/bin
-                          sudo python3 '$(Pipeline.Workspace)/$(selenium)/ui_automation.py'
+                          sudo python3 'automatedtesting/selenium/login.py'
 
 
 
