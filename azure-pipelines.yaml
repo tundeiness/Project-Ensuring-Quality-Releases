@@ -57,61 +57,127 @@ stages:
           cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
 
+    # - task: Bash@3
+    #   displayName: 'Terraform Init'
+    #   env:
+    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+    #       terraform init \
+    #         -backend-config="storage_account_name=tfstatecc9ded810294" \
+    #         -backend-config="container_name=tfstate" \
+    #         -backend-config="key=test.terraform.tfstate" \
+    #         -backend-config="resource_group_name=Azuredevops" \
+    #         -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+    #         -backend-config="tenant_id=$ARM_TENANT_ID"
+
+    # - task: Bash@3
+    #   displayName: 'Create terraform.tfvars'
+    #   env:
+    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+    #       cat > terraform.tfvars <<EOF
+    #       subscription_id     = "$ARM_SUBSCRIPTION_ID"
+    #       client_id           = "$ARM_CLIENT_ID"
+    #       client_secret       = "$ARM_CLIENT_SECRET"
+    #       tenant_id           = "$ARM_TENANT_ID"
+    #       location            = "East US"
+    #       resource_group      = "Azuredevops"
+    #       application_type    = "myWebApp"
+    #       virtual_network_name = "devopsnet"
+    #       address_space       = ["10.5.0.0/16"]
+    #       address_prefix_test = "10.5.1.0/24"
+    #       vm_name             = "$(vmImageName)"
+    #       admin_ssh_key       = "$ADMIN_SSH_PUBLIC_KEY"
+    #       EOF
+
+    # - task: Bash@3
+    #   displayName: 'Terraform Apply'
+    #   env:
+    #     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+    #     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+    #     ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+    #     ARM_TENANT_ID: $(ARM_TENANT_ID)
+    #   inputs:
+    #     targetType: 'inline'
+    #     script: |
+    #       cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+    #       terraform apply -auto-approve
+
+
+- stage: Test
+  displayName: 'Deploy and Run Tests'
+  dependsOn: Build
+  jobs:
+  - deployment: VirtualMachineDeploy
+    displayName: 'Deploy Selenium on Virtual Machine'
+    environment:
+      name: 'devopsVM'
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Bash@3
+            displayName: 'Configure Selenium on VM'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: '/home/selenium-test/'
+              script: |
+                #! /bin/bash
+                sudo apt-get update
+                sudo apt-get upgrade -y
+                sudo apt-get install python3-pip unzip expect zip -y
+                sudo apt-get install -y chromium-browser
+                pip3 install selenium
+                sudo rm -rf chromedriver*
+                wget https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
+                unzip chromedriver_linux64.zip
+                sudo mv chromedriver -f /usr/bin
+                chmod +x /usr/bin/chromedriver
+
+  - job: SeleniumTests
+    displayName: 'Run Selenium Tests'
+    dependsOn: VirtualMachineDeploy
+    steps:
     - task: Bash@3
-      displayName: 'Terraform Init'
-      env:
-        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      displayName: 'Execute Selenium Test Suite'
       inputs:
         targetType: 'inline'
         script: |
-          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          terraform init \
-            -backend-config="storage_account_name=tfstatecc9ded810294" \
-            -backend-config="container_name=tfstate" \
-            -backend-config="key=test.terraform.tfstate" \
-            -backend-config="resource_group_name=Azuredevops" \
-            -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-            -backend-config="tenant_id=$ARM_TENANT_ID"
+          #! /bin/bash
+          python -m pip install --upgrade pip
+          pip install selenium
+          pip install pytest
+          pip install pytest-html
+          pip install chromedriver-py==96.0.4664.18
+          pip install pytest-xdist
+          pip install pytest-nunit
+          python3 automatedtesting/selenium/login.py
 
     - task: Bash@3
-      displayName: 'Create terraform.tfvars'
-      env:
-        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      displayName: 'Zip /home/selenium-test/ contents'
       inputs:
         targetType: 'inline'
         script: |
-          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          cat > terraform.tfvars <<EOF
-          subscription_id     = "$ARM_SUBSCRIPTION_ID"
-          client_id           = "$ARM_CLIENT_ID"
-          client_secret       = "$ARM_CLIENT_SECRET"
-          tenant_id           = "$ARM_TENANT_ID"
-          location            = "East US"
-          resource_group      = "Azuredevops"
-          application_type    = "myWebApp"
-          virtual_network_name = "devopsnet"
-          address_space       = ["10.5.0.0/16"]
-          address_prefix_test = "10.5.1.0/24"
-          vm_name             = "$(vmImageName)"
-          admin_ssh_key       = "$ADMIN_SSH_PUBLIC_KEY"
-          EOF
+          #! /bin/bash
+          cd /home/selenium-test/
+          zip -r selenium-test.zip .
 
-    - task: Bash@3
-      displayName: 'Terraform Apply'
-      env:
-        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-        ARM_TENANT_ID: $(ARM_TENANT_ID)
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Selenium Test Folder'
       inputs:
-        targetType: 'inline'
-        script: |
-          cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-          terraform apply -auto-approve
-
+        PathtoPublish: '/home/selenium-test/selenium-test.zip'
+        ArtifactName: 'selenium-artifacts'
+        publishLocation: 'Container'
