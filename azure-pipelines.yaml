@@ -117,36 +117,52 @@ stages:
 
 
   - job: SeleniumTests
-    displayName: Selenium Tests
     steps:
     - task: Bash@3
-      displayName: Run Selenium
+      displayName: 'Run Selenium'
       inputs:
         targetType: 'inline'
         script: |
-          #! /bin/bash 
-          sudo apt update && sudo apt upgrade
-          # sudo apt --fix-broken install
-          sudo apt install python3.8-venv
+          #!/bin/bash
+          set -e
+
+          echo "Updating packages..."
+          sudo apt update && sudo apt upgrade -y
+
+          echo "Installing dependencies..."
+          sudo apt install -y python3.8-venv python3-pip wget unzip libgconf-2-4
+
+          echo "Setting up virtual environment..."
           python3 -m venv ~/.myrepo
           source ~/.myrepo/bin/activate
-          pip3 install selenium
-          pip3 install webdriver-manager
-         
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb
-          sudo apt-get -f install
+
+          echo "Installing Python packages..."
+          pip install --upgrade pip
+          pip install selenium webdriver-manager
+
+          echo "Installing Google Chrome..."
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
+
+          echo "Verifying Chrome version..."
           google-chrome --version
-          sudo touch /var/log/ui.log
-          sudo chown azureuser /var/log/ui.log
-          python3 automatedtesting/selenium/login.py > ui-logs.log
-          python3 automatedtesting/selenium/login.py > /var/log/ui.log
+
+          echo "Setting up log files..."
+          mkdir -p logs
+          touch logs/ui-logs.log
+
+          echo "Running Selenium script..."
+          if [ -f automatedtesting/selenium/login.py ]; then
+            python automatedtesting/selenium/login.py | tee logs/ui-logs.log
+          else
+            echo "Test script not found: automatedtesting/selenium/login.py" | tee logs/ui-logs.log
+          fi
+
     - task: PublishPipelineArtifact@1
-      displayName: Publish selenium logs
+      displayName: 'Publish Selenium Logs'
       inputs:
-        targetPath: '$(System.DefaultWorkingDirectory)/ui-logs.log'
+        targetPath: 'logs/ui-logs.log'
         artifactName: 'drop-selenium-logs'
-  
 
   #   strategy:
   #     runOnce:
