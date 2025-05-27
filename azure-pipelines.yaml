@@ -284,16 +284,20 @@ stages:
                     node -v
                     npm -v
 
-                    echo "Installing Newman and JUnitFull Reporter..."
+                    echo "📦 Installing Newman and JUnitFull Reporter..."
                     sudo npm install -g newman
                     sudo npm install -g newman-reporter-junitfull
 
-                    echo "Running Data Validation Collection..." 
+                    echo "📂 Checking Postman Collection Files..."
+                    ls -la "$(System.DefaultWorkingDirectory)/automatedtesting/postman/validation"
+                    ls -la "$(System.DefaultWorkingDirectory)/automatedtesting/postman/regression"
+
+                    echo "🚀 Running Data Validation Collection..." 
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/validation/data_validation_suite.json" \
                       -r cli,junitfull \
                       --reporter-junitfull-export result-data-validation-test.xml
 
-                    echo "Running Data Regression Collection..."
+                    echo "🚀 Running Data Regression Collection..."
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/regression/regression_suite.json" \
                       -r cli,junitfull \
                       --reporter-junitfull-export result-regression-test.xml
