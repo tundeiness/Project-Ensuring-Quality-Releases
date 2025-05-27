@@ -98,29 +98,34 @@ stages:
           sudo apt remove -y google-chrome-stable || true
           sudo apt autoremove -y
           
-          # Add Google's official GPG key and repository
-          wget -qO- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          
-          sudo apt update
-          sudo apt install -y --no-install-recommends google-chrome-stable
+          # Install Chrome via direct download (avoids GPG issues)
+          wget -q --no-check-certificate https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y --no-install-recommends --fix-broken ./google-chrome-stable_current_amd64.deb || {
+              sudo apt update --fix-missing
+              sudo apt install -y --no-install-recommends -f
+              sudo dpkg -i google-chrome-stable_current_amd64.deb
+          }
+          rm -f google-chrome-stable_current_amd64.deb
           
           # Verify Chrome installation
           google-chrome --version
           
           echo "=== Test Execution ==="
-          # Ensure clean test environment
+          # Ensure clean test environment (create early to prevent artifact publish errors)
           rm -rf tests/
           mkdir -p tests
+          touch tests/selenium-output.log
           
           # Set Chrome options for headless CI environment
           export CHROME_OPTIONS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080"
           
           # Run tests with timeout and proper error handling
-          timeout 300 python3 automatedtesting/selenium/login.py 2>&1 | tee tests/selenium-output.log
-          
-          # Ensure log file exists even if tests fail
-          touch tests/selenium-output.log
+          if timeout 300 python3 automatedtesting/selenium/login.py 2>&1 | tee tests/selenium-output.log; then
+              echo "Tests completed successfully"
+          else
+              echo "Tests failed or timed out" | tee -a tests/selenium-output.log
+              exit_code=$?
+          fi
           
           echo "=== Test Summary ==="
           echo "Chrome version: $(google-chrome --version)"
