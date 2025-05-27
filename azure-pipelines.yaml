@@ -29,10 +29,10 @@ stages:
     pool:
       name: myAgentPool
     steps:
-    - task: TerraformInstaller@0
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: '1.5.7'
+    # - task: TerraformInstaller@0
+    #   displayName: 'Install Terraform'
+    #   inputs:
+    #     terraformVersion: '1.5.7'
 
     - task: Bash@3
       displayName: 'Write SSH Public Key to id_rsa.pub'
@@ -56,45 +56,86 @@ stages:
           mkdir -p ~/.ssh
           cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
-    
+
     - task: Bash@3
-      displayName: 'Install Chrome, Chromedriver, and Selenium'
+      displayName: 'Run Selenium Tests'
       inputs:
         targetType: 'inline'
-        workingDirectory: '$(System.DefaultWorkingDirectory)'
         script: |
           #!/bin/bash
-          set -e
-
-          sudo apt-get update -y
-          sudo apt-get upgrade -y
-
-          sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4 chromium-browser
-
-          echo "🌐 Installing Google Chrome..."
-          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
-
-          echo "🚗 Installing Chromedriver..."
-          wget -q https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip -d /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-
-          echo "🐍 Installing Selenium..."
-          pip3 install selenium
-
-          echo "📁 Creating log directory..."
-          mkdir -p test-logs
-
-          echo "🚀 Running Selenium script..."
-          sudo python3 automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
+          set -euo pipefail
+          
+          # Disable package caching and force fresh installs
+          export PIP_NO_CACHE_DIR=1
+          export DEBIAN_FRONTEND=noninteractive
+          
+          echo "=== System Setup ==="
+          # Force package list refresh and upgrade critical components only
+          sudo apt update --fix-missing
+          sudo apt install -y --no-install-recommends --reinstall \
+            python3-pip \
+            python3-venv \
+            wget \
+            unzip \
+            ca-certificates \
+            gnupg \
+            lsb-release
+          
+          echo "=== Python Environment Setup ==="
+          # Force pip upgrade and clear any existing installations
+          python3 -m pip install --upgrade --force-reinstall --no-cache-dir pip setuptools wheel
+          
+          # Uninstall existing selenium/webdriver packages if present
+          python3 -m pip uninstall -y selenium webdriver-manager || true
+          
+          # Install fresh selenium packages
+          python3 -m pip install --no-cache-dir --force-reinstall \
+            selenium==4.15.2 \
+            webdriver-manager==4.0.1
+          
+          echo "=== Chrome Installation ==="
+          # Remove existing Chrome and install fresh
+          sudo apt remove -y google-chrome-stable || true
+          sudo apt autoremove -y
+          
+          # Add Google's official GPG key and repository
+          wget -qO- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          
+          sudo apt update
+          sudo apt install -y --no-install-recommends google-chrome-stable
+          
+          # Verify Chrome installation
+          google-chrome --version
+          
+          echo "=== Test Execution ==="
+          # Ensure clean test environment
+          rm -rf tests/
+          mkdir -p tests
+          
+          # Set Chrome options for headless CI environment
+          export CHROME_OPTIONS="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080"
+          
+          # Run tests with timeout and proper error handling
+          timeout 300 python3 automatedtesting/selenium/login.py 2>&1 | tee tests/selenium-output.log
+          
+          # Ensure log file exists even if tests fail
+          touch tests/selenium-output.log
+          
+          echo "=== Test Summary ==="
+          echo "Chrome version: $(google-chrome --version)"
+          echo "Selenium version: $(python3 -c 'import selenium; print(selenium.__version__)')"
+          echo "Test output size: $(wc -l < tests/selenium-output.log) lines"
 
     - task: PublishPipelineArtifact@1
-      displayName: 'Publish Selenium Log Artifact'
+      displayName: 'Publish Test Artifacts'
+      condition: always()
       inputs:
-        targetPath: 'test-logs/selenium-log.log'
-        artifactName: 'selenium-logs'
-
+        targetPath: 'tests/'
+        artifactName: 'selenium-test-results'
+        publishLocation: 'pipeline'
+      
+    
 
     # - task: Bash@3
     #   displayName: 'Terraform Init'
@@ -155,41 +196,6 @@ stages:
     #       terraform apply -auto-approve
 
 
-  # - job: SeleniumTests
-  #   steps:
-    
-  #   - task: Bash@3
-  #     displayName: 'Run Selenium'
-  #     inputs:
-  #       targetType: 'inline'
-  #       script: |
-  #         #!/bin/bash
-  #         set -e
-
-  #         echo "Updating packages..."
-  #         sudo apt update && sudo apt upgrade -y
-
-  #         echo "Installing dependencies..."
-  #         sudo apt install -y python3.8-venv python3-pip wget unzip libgconf-2-4
-
-  #         echo "Installing Python packages..."
-  #         pip install --upgrade pip
-  #         pip install selenium webdriver-manager
-
-  #         echo "Installing Google Chrome..."
-  #         wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-  #         sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
-
-  #         mkdir -p tests
-  #         touch tests/newlog.log
-
-  #         python3 automatedtesting/selenium/login.py | tee tests/newlog.log
-
-  #   - task: PublishPipelineArtifact@1
-  #     displayName: 'Publish Selenium Logs'
-  #     inputs:
-  #       targetPath: 'tests/newlog.log'
-  #       artifactName: 'selenium-logs'
 
 
       
