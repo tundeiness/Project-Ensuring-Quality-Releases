@@ -148,21 +148,22 @@ stages:
           google-chrome --version
 
           echo "Setting up log files..."
-          mkdir -p logs
-          touch logs/ui-logs.log
+          mkdir -p test-logs
+          touch test-logs/selenium-log.log
 
           echo "Running Selenium script..."
           if [ -f automatedtesting/selenium/login.py ]; then
-            python automatedtesting/selenium/login.py | tee logs/ui-logs.log
+            python automatedtesting/selenium/login.py | tee logs/selenium-log.log
           else
-            echo "Test script not found: automatedtesting/selenium/login.py" | tee logs/ui-logs.log
+            echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
           fi
 
     - task: PublishPipelineArtifact@1
       displayName: 'Publish Selenium Logs'
       inputs:
-        targetPath: 'logs/ui-logs.log'
-        artifactName: 'drop-selenium-logs'
+        targetPath: 'test-logs/selenium-log.log'
+        artifactName: 'selenium-logs'
+
 
   #   strategy:
   #     runOnce:
