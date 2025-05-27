@@ -153,7 +153,7 @@ stages:
 
           echo "Running Selenium script..."
           if [ -f automatedtesting/selenium/login.py ]; then
-            python automatedtesting/selenium/login.py | tee logs/selenium-log.log
+            python automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
           else
             echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
           fi
