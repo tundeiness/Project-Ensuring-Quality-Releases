@@ -151,3 +151,42 @@ stages:
                   appName: 'myWebApp-AppService-bc8444f7'
                   appType: 'webApp'
                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+
+
+- stage: EnduranceTest
+  displayName: 'Endurance Test Stage'
+  jobs:
+    - deployment: RunEnduranceTest
+      displayName: 'Run Endurance Test'
+      environment: 'test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: JMeterInstaller@0
+                displayName: 'Install JMeter'
+              - task: Bash@3
+                displayName: 'Execute Endurance Test Suite'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    jmeter -n \
+                      -t automatedtesting/jmeter/endurance.jmx \
+                      -l endurance-test-report/endurance-results.jtl \
+                      -e \
+                      -o endurance-test-report
+
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish Endurance Report'
+                inputs:
+                  PathtoPublish: 'endurance-test-report'
+                  ArtifactName: 'endurance-report'
+                  publishLocation: 'Container'
+
+              - task: Bash@3
+                displayName: 'Print Endurance Logs'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    ls -lah endurance-test-report/
+                    cat jmeter.log
