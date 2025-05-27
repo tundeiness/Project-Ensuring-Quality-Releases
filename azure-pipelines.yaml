@@ -272,11 +272,19 @@ stages:
           deploy:
             steps:
               - task: Bash@3
-                displayName: 'Install Newman and Run Postman Collections'
+                displayName: 'Install Node.js, Newman and Run Postman Collections'
                 inputs:
                   targetType: 'inline'
                   script: |
-                    echo "🔧 Installing Newman and JUnitFull Reporter..."
+                    echo "🔧 Installing Node.js and npm..."
+                    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+                    sudo apt-get install -y nodejs
+
+                    echo "🧪 Verifying installation..."
+                    node -v
+                    npm -v
+
+                    echo "📦 Installing Newman and JUnitFull Reporter..."
                     sudo npm install -g newman
                     sudo npm install -g newman-reporter-junitfull
 
