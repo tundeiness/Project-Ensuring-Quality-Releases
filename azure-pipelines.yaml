@@ -165,6 +165,13 @@ stages:
             steps:
 
               - task: Bash@3
+                displayName: 'Clean endurance report directory'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    rm -rf endurance-test-report
+
+              - task: Bash@3
                 displayName: 'Install Java (OpenJDK 11)'
                 inputs:
                   targetType: 'inline'
