@@ -159,22 +159,22 @@ stages:
           fi
 
 
-    - task: ArchiveFiles@2
-      displayName: 'Archive UI Tests'
-      inputs:
-        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/uitests.zip'
-    - publish: $(Build.ArtifactStagingDirectory)/uitests.zip   # Same as the archiveFile artifact above. 
-      displayName: 'Upload Package'
-      artifact: drop-uitests
-
-    # - task: PublishPipelineArtifact@1
-    #   displayName: 'Publish Selenium Logs'
+    # - task: ArchiveFiles@2
+    #   displayName: 'Archive UI Tests'
     #   inputs:
-    #     targetPath: 'test-logs/selenium-log.log'
-    #     artifactName: 'selenium-logs'
+    #     rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
+    #     includeRootFolder: false
+    #     archiveType: 'zip'
+    #     archiveFile: '$(Build.ArtifactStagingDirectory)/uitests.zip'
+    # - publish: $(Build.ArtifactStagingDirectory)/uitests.zip   # Same as the archiveFile artifact above. 
+    #   displayName: 'Upload Package'
+    #   artifact: drop-uitests
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Selenium Logs'
+      inputs:
+        targetPath: 'test-logs/selenium-log.log'
+        artifactName: 'selenium-logs'
 
 
   #   strategy:
