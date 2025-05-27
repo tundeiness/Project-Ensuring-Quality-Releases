@@ -158,11 +158,20 @@ stages:
             echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
           fi
 
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish Selenium Logs'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive UI Tests'
       inputs:
-        targetPath: 'test-logs/selenium-log.log'
-        artifactName: 'selenium-logs'
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/uitests.zip'
+
+    # - task: PublishPipelineArtifact@1
+    #   displayName: 'Publish Selenium Logs'
+    #   inputs:
+    #     targetPath: 'test-logs/selenium-log.log'
+    #     artifactName: 'selenium-logs'
 
 
   #   strategy:
