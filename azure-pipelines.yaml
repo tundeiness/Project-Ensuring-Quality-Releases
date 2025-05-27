@@ -289,12 +289,12 @@ stages:
                     sudo npm install -g newman-reporter-junitfull
 
                     echo "Running Data Validation Collection..." 
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/data_validation_suite.json" \
+                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/validation/data_validation_suite.json" \
                       -r cli,junitfull \
                       --reporter-junitfull-export result-data-validation-test.xml
 
                     echo "Running Data Regression Collection..."
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/regression_suite.json" \
+                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/regression/regression_suite.json" \
                       -r cli,junitfull \
                       --reporter-junitfull-export result-regression-test.xml
 
