@@ -56,6 +56,45 @@ stages:
           mkdir -p ~/.ssh
           cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
           chmod 400 ~/.ssh/id_rsa
+    
+    - task: Bash@3
+      displayName: 'Install Chrome, Chromedriver, and Selenium'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
+        script: |
+          #!/bin/bash
+          set -e
+
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
+
+          sudo apt-get install -y python3-pip unzip xvfb libxi6 libgconf-2-4 chromium-browser
+
+          echo "🌐 Installing Google Chrome..."
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
+
+          echo "🚗 Installing Chromedriver..."
+          wget -q https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip -d /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+
+          echo "🐍 Installing Selenium..."
+          pip3 install selenium
+
+          echo "📁 Creating log directory..."
+          mkdir -p test-logs
+
+          echo "🚀 Running Selenium script..."
+          sudo python3 automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Selenium Log Artifact'
+      inputs:
+        targetPath: 'test-logs/selenium-log.log'
+        artifactName: 'selenium-logs'
+
 
     # - task: Bash@3
     #   displayName: 'Terraform Init'
@@ -116,166 +155,41 @@ stages:
     #       terraform apply -auto-approve
 
 
-  - job: SeleniumTests
-    steps:
-    
-    - task: Bash@3
-      displayName: 'Run Selenium'
-      inputs:
-        targetType: 'inline'
-        script: |
-          #!/bin/bash
-          set -e
-
-          echo "Updating packages..."
-          sudo apt update && sudo apt upgrade -y
-
-          echo "Installing dependencies..."
-          sudo apt install -y python3.8-venv python3-pip wget unzip libgconf-2-4
-
-          # echo "Setting up virtual environment..."
-          # python3 -m venv ~/.myrepo
-          # source ~/.myrepo/bin/activate
-
-          echo "Installing Python packages..."
-          pip install --upgrade pip
-          pip install selenium webdriver-manager
-
-          echo "Installing Google Chrome..."
-          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
-
-          mkdir -p tests
-          touch tests/newlog.log
-
-          python3 automatedtesting/selenium/login.py | tee tests/newlog.log
-
-          # echo "Running Selenium script..."
-          # if [ -f automatedtesting/selenium/login.py ]; then
-          #   python3 automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
-          # else
-          #   echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
-          # fi
-
-
-    # - task: ArchiveFiles@2
-    #   displayName: 'Archive UI Tests'
-    #   inputs:
-    #     rootFolderOrFile: '$(System.DefaultWorkingDirectory)/automatedtesting/selenium'
-    #     includeRootFolder: false
-    #     archiveType: 'zip'
-    #     archiveFile: '$(Build.ArtifactStagingDirectory)/uitests.zip'
-    # - publish: $(Build.ArtifactStagingDirectory)/uitests.zip   # Same as the archiveFile artifact above. 
-    #   displayName: 'Upload Package'
-    #   artifact: drop-uitests
-
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish Selenium Logs'
-      inputs:
-        targetPath: 'tests/newlog.log'
-        artifactName: 'selenium-logs'
-
-
-  #   strategy:
-  #     runOnce:
-  #       deploy:
-  #         steps:
-  #         - task: Bash@3
-  #           displayName: 'Configure Selenium on VM'
-  #           inputs:
-  #             targetType: 'inline'
-  #             script: |
-  #               #!/bin/bash
-  #               set -e
-
-  #               mkdir -p $HOME/selenium-test
-  #               cd $HOME/selenium-test
-
-  #               sudo apt-get update
-  #               sudo apt-get upgrade -y
-  #               sudo apt-get install python3-pip unzip expect zip chromium-browser -y
-
-  #               pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
-
-  #               rm -rf chromedriver*
-  #               wget -q https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
-  #               unzip -q chromedriver_linux64.zip
-  #               sudo mv chromedriver /usr/bin/
-  #               sudo chmod +x /usr/bin/chromedriver
-  #               rm chromedriver_linux64.zip
-
   # - job: SeleniumTests
-  #   displayName: 'Run Selenium Tests'
-  #   dependsOn: VirtualMachineDeploy
   #   steps:
+    
   #   - task: Bash@3
-  #     displayName: 'Execute Selenium Test Suite'
+  #     displayName: 'Run Selenium'
   #     inputs:
   #       targetType: 'inline'
   #       script: |
   #         #!/bin/bash
   #         set -e
 
-  #         mkdir -p $HOME/selenium-test
-  #         cd $HOME/selenium-test
+  #         echo "Updating packages..."
+  #         sudo apt update && sudo apt upgrade -y
 
-  #         python3 -m pip install --upgrade pip
-  #         pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
+  #         echo "Installing dependencies..."
+  #         sudo apt install -y python3.8-venv python3-pip wget unzip libgconf-2-4
 
-  #         cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
+  #         echo "Installing Python packages..."
+  #         pip install --upgrade pip
+  #         pip install selenium webdriver-manager
 
-  #         mkdir -p logs test-results
+  #         echo "Installing Google Chrome..."
+  #         wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+  #         sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
 
-  #         echo "Starting Selenium test execution at $(date)" | tee logs/test-execution.log
+  #         mkdir -p tests
+  #         touch tests/newlog.log
 
-  #         python3 automatedtesting/selenium/login.py 2>&1 | tee logs/selenium-test-output.log
-  #         TEST_EXIT_CODE=${PIPESTATUS[0]}
+  #         python3 automatedtesting/selenium/login.py | tee tests/newlog.log
 
-  #         echo "Test execution completed at $(date) with exit code: $TEST_EXIT_CODE" | tee -a logs/test-execution.log
-
-  #         echo "=== SELENIUM TEST SUMMARY ===" > test-results/test-summary.txt
-  #         echo "Execution Date: $(date)" >> test-results/test-summary.txt
-  #         echo "Test Script: automatedtesting/selenium/login.py" >> test-results/test-summary.txt
-  #         echo "Exit Code: $TEST_EXIT_CODE" >> test-results/test-summary.txt
-  #         echo "Log Files Generated:" >> test-results/test-summary.txt
-  #         echo "- logs/test-execution.log" >> test-results/test-summary.txt
-  #         echo "- logs/selenium-test-output.log" >> test-results/test-summary.txt
-
-  #         if [ $TEST_EXIT_CODE -eq 0 ]; then
-  #           echo "Status: PASSED" >> test-results/test-summary.txt
-  #         else
-  #           echo "Status: FAILED" >> test-results/test-summary.txt
-  #         fi
-
-  #         echo "" >> test-results/test-summary.txt
-  #         echo "Files in test directory:" >> test-results/test-summary.txt
-  #         find . -type f -newer automatedtesting/selenium/login.py 2>/dev/null >> test-results/test-summary.txt || echo "No new files created" >> test-results/test-summary.txt
-
-  #         exit $TEST_EXIT_CODE
-
-  #   - task: Bash@3
-  #     displayName: 'Archive Test Results'
-  #     condition: always()
+  #   - task: PublishPipelineArtifact@1
+  #     displayName: 'Publish Selenium Logs'
   #     inputs:
-  #       targetType: 'inline'
-  #       script: |
-  #         #!/bin/bash
-  #         set -e
+  #       targetPath: 'tests/newlog.log'
+  #       artifactName: 'selenium-logs'
 
-  #         cd $HOME/selenium-test
 
-  #         mkdir -p selenium-test-results
-  #         [ -d "logs" ] && cp -r logs selenium-test-results/
-  #         [ -d "test-results" ] && cp -r test-results selenium-test-results/
-
-  #         find . -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.html" -o -iname "*.xml" -o -iname "*.json" \) -exec cp {} selenium-test-results/ \; 2>/dev/null || true
-
-  #         zip -r selenium-test-results.zip selenium-test-results/
-  #         cp selenium-test-results.zip $(System.DefaultWorkingDirectory)/
-
-  #   - task: PublishBuildArtifacts@1
-  #     displayName: 'Publish Selenium Test Artifacts'
-  #     inputs:
-  #       PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test-results.zip'
-  #       ArtifactName: 'selenium-artifacts'
-  #       publishLocation: 'Container'
+      
