@@ -36,17 +36,6 @@ import tempfile
 
 
 
-# options = Options()
-# options.add_argument('--headless')
-# options.add_argument('--no-sandbox')
-# options.add_argument('--disable-dev-shm-usage')
-
-# driver = webdriver.Chrome(options=options)
-# driver.get('https://example.com/login')
-# # Your login logic here
-# driver.quit()
-
-
 
 
 
@@ -55,39 +44,39 @@ def login_to_sauce_demo():
     """Login to the SauceDemo website and return the driver instance"""
     # Set up Chrome options
     options = Options()
-    # chrome_options.add_argument("--start-maximized")  # Start maximized
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    
+
     # Set up the WebDriver
-    service = Service()  # Update with your chromedriver path if needed
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    
+    service = Service()  # You can specify chromedriver path if needed
+    driver = webdriver.Chrome(service=service, options=options)
+
     # Navigate to the website
     driver.get("https://www.saucedemo.com/")
-    
+
     # Wait for the login form to be visible
     username_field = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "user-name"))
     )
-    
+
     # Enter login credentials
     username_field.send_keys("visual_user")
     password_field = driver.find_element(By.ID, "password")
     password_field.send_keys("secret_sauce")
-    
+
     # Click the login button
     login_button = driver.find_element(By.ID, "login-button")
     login_button.click()
-    
+
     # Wait for successful login - check for the inventory page
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "inventory_container"))
     )
     print("Successfully logged in!")
-    
+
     return driver
+
 
 
 
