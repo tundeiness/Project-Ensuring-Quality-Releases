@@ -116,49 +116,37 @@ stages:
     #       terraform apply -auto-approve
 
 
-- stage: Test
-  displayName: 'Deploy and Run Tests'
-  dependsOn: Build
-  jobs:
-  - deployment: VirtualMachineDeploy
-    displayName: 'Deploy Selenium on Virtual Machine'
-    environment:
-      name: 'devopsVM'
-      resourceType: VirtualMachine
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: |
-              # Create directories for test logs
-              sudo mkdir -p logs/tests/selenium
-              sudo mkdir -p /var/log/selenium
-              sudo chmod 777 /var/log/selenium
-              
-              # Navigate to build workspace and unzip artifacts
-              cd "$(Pipeline.Workspace)/$(BUILD_SELENIUM)"
-              unzip -o "$(Build.BuildId)-selenium.zip"
-              
-              # Install dependencies and run tests
-              pip install selenium
-              python3 -u selenium_tests.py
-
-              # Copy logs to VM log path
-              sudo cp logs/tests/selenium/selenium-tests.log /var/log/selenium/selenium-tests.log
-              
-              # Debug outputs
-              pwd
-              ls -la
-              ls -la /var/log
-              ls -la /var/log/selenium
-            displayName: 'Run Selenium tests'
-
-          - task: PublishPipelineArtifact@1
-            displayName: 'Publish Selenium test logs'
-            inputs:
-              targetPath: '$(Pipeline.Workspace)/$(BUILD_SELENIUM)/logs/tests/selenium/selenium-tests.log'
-              artifactName: '$(ARTIFACT_SELENIUM)'
-
+  - job: SeleniumTests
+    displayName: Selenium Tests
+    steps:
+    - task: Bash@3
+      displayName: Run Selenium
+      inputs:
+        targetType: 'inline'
+        script: |
+          #! /bin/bash 
+          sudo apt update && sudo apt upgrade
+          # sudo apt --fix-broken install
+          sudo apt install python3.8-venv
+          python3 -m venv ~/.myrepo
+          source ~/.myrepo/bin/activate
+          pip3 install selenium
+          pip3 install webdriver-manager
+         
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb
+          sudo apt-get -f install
+          google-chrome --version
+          sudo touch /var/log/ui.log
+          sudo chown azureuser /var/log/ui.log
+          python3 automatedtesting/selenium/login.py > ui-logs.log
+          python3 automatedtesting/selenium/login.py > /var/log/ui.log
+    - task: PublishPipelineArtifact@1
+      displayName: Publish selenium logs
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/ui-logs.log'
+        artifactName: 'drop-selenium-logs'
+  
 
   #   strategy:
   #     runOnce:
