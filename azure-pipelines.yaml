@@ -118,6 +118,12 @@ stages:
 
   - job: SeleniumTests
     steps:
+    
+    - task: DeleteFiles@1
+      displayName: 'Clean workspace before test'
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: '**/__pycache__/**\n**/*.pyc'
     - task: Bash@3
       displayName: 'Run Selenium'
       inputs:
