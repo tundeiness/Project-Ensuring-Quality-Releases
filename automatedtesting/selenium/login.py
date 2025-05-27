@@ -149,7 +149,7 @@
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
@@ -157,8 +157,8 @@ import time
 
 def test_saucedemo_login_add_remove_items():
     # Initialize Chrome options correctly
-    options = Options()
-    options.add_argument("--start-maximized")
+    options = ChromeOptions()
+    options.add_argument("--headless") 
 
     # Create the driver with the right options
     driver = webdriver.Chrome(options=options)
