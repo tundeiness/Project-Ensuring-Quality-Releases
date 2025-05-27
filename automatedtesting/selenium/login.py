@@ -160,12 +160,12 @@ import time
 
 def test_saucedemo_login_add_remove_items():
     # Setup Chrome options
-    options = Options()
-    options.add_argument("--headless")
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
     # You can run in headless mode with: options.add_argument("--headless")
 
     # Create WebDriver instance
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(options=chrome_options)
 
     try:
         # Open the website
