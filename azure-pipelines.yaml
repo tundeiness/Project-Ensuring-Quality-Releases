@@ -119,11 +119,6 @@ stages:
   - job: SeleniumTests
     steps:
     
-    - task: DeleteFiles@1
-      displayName: 'Clean workspace before test'
-      inputs:
-        SourceFolder: '$(Build.SourcesDirectory)'
-        Contents: '**/__pycache__/**\n**/*.pyc'
     - task: Bash@3
       displayName: 'Run Selenium'
       inputs:
@@ -138,9 +133,9 @@ stages:
           echo "Installing dependencies..."
           sudo apt install -y python3.8-venv python3-pip wget unzip libgconf-2-4
 
-          echo "Setting up virtual environment..."
-          python3 -m venv ~/.myrepo
-          source ~/.myrepo/bin/activate
+          # echo "Setting up virtual environment..."
+          # python3 -m venv ~/.myrepo
+          # source ~/.myrepo/bin/activate
 
           echo "Installing Python packages..."
           pip install --upgrade pip
@@ -150,19 +145,17 @@ stages:
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
 
-          echo "Verifying Chrome version..."
-          google-chrome --version
+          mkdir -p tests
+          touch tests/selenium-log.log
 
-          echo "Setting up log files..."
-          mkdir -p test-logs
-          touch test-logs/selenium-log.log
+          python3 automatedtesting/selenium/login.py | tee tests/selenium-log.log
 
-          echo "Running Selenium script..."
-          if [ -f automatedtesting/selenium/login.py ]; then
-            python automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
-          else
-            echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
-          fi
+          # echo "Running Selenium script..."
+          # if [ -f automatedtesting/selenium/login.py ]; then
+          #   python3 automatedtesting/selenium/login.py | tee test-logs/selenium-log.log
+          # else
+          #   echo "Test script not found: automatedtesting/selenium/login.py" | tee test-logs/selenium-log.log
+          # fi
 
 
     # - task: ArchiveFiles@2
@@ -179,7 +172,7 @@ stages:
     - task: PublishPipelineArtifact@1
       displayName: 'Publish Selenium Logs'
       inputs:
-        targetPath: 'test-logs/selenium-log.log'
+        targetPath: 'tests/selenium-log.log'
         artifactName: 'selenium-logs'
 
 
