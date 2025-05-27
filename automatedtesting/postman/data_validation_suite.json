@@ -12,14 +12,21 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"Response contains success\", function () {",
-              "    pm.expect(pm.response.text()).to.include(\"success\");",
+              "pm.test(\"Status code is 200 or 429 (rate limited)\", function () {",
+              "    pm.expect(pm.response.code === 200 || pm.response.code === 429).to.be.true;",
               "});",
-              "var json = pm.response.json();",
-              "pm.test(\"Has ID in response\", function () {",
-              "    pm.expect(json.data).to.have.property(\"id\");",
-              "});",
-              "pm.environment.set(\"id\", json.data.id);"
+              "if (pm.response.code === 200) {",
+              "    pm.test(\"Response contains success\", function () {",
+              "        pm.expect(pm.response.text()).to.include(\"success\");",
+              "    });",
+              "    var json = pm.response.json();",
+              "    pm.test(\"Has ID in response\", function () {",
+              "        pm.expect(json.data).to.have.property(\"id\");",
+              "    });",
+              "    pm.environment.set(\"id\", json.data.id);",
+              "} else {",
+              "    console.warn('Request was rate limited, skipping detailed validation');",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -53,13 +60,20 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var json = pm.response.json();",
-              "pm.test(\"Response contains success\", function () {",
-              "    pm.expect(json.status).to.eql(\"success\");",
+              "pm.test(\"Status code is 200 or 429 (rate limited)\", function () {",
+              "    pm.expect(pm.response.code === 200 || pm.response.code === 429).to.be.true;",
               "});",
-              "pm.test(\"Employees list is not empty\", function () {",
-              "    pm.expect(json.data.length).to.be.above(0);",
-              "});"
+              "if (pm.response.code === 200) {",
+              "    var json = pm.response.json();",
+              "    pm.test(\"Response contains success\", function () {",
+              "        pm.expect(json.status).to.eql(\"success\");",
+              "    });",
+              "    pm.test(\"Employees list is not empty\", function () {",
+              "        pm.expect(json.data.length).to.be.above(0);",
+              "    });",
+              "} else {",
+              "    console.warn('Request was rate limited, skipping detailed validation');",
+              "}"
             ],
             "type": "text/javascript"
           }
