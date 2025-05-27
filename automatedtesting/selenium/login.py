@@ -147,11 +147,8 @@
 #     execute_full_process()
 
 
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -159,16 +156,15 @@ import time
 
 
 def test_saucedemo_login_add_remove_items():
-    # Setup Chrome options
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    # You can run in headless mode with: options.add_argument("--headless")
+    # Initialize Chrome options correctly
+    options = Options()
+    options.add_argument("--start-maximized")
 
-    # Create WebDriver instance
-    driver = webdriver.Chrome(options=chrome_options)
+    # Create the driver with the right options
+    driver = webdriver.Chrome(options=options)
 
     try:
-        # Open the website
+        # Go to the website
         driver.get("https://www.saucedemo.com")
 
         # Login
@@ -185,12 +181,12 @@ def test_saucedemo_login_add_remove_items():
         add_buttons = driver.find_elements(By.XPATH, '//button[text()="Add to cart"]')
         for button in add_buttons[:3]:
             button.click()
-            time.sleep(0.5)  # Slight delay to simulate user interaction
+            time.sleep(0.5)
 
         # Go to the cart
         driver.find_element(By.CLASS_NAME, "shopping_cart_link").click()
 
-        # Wait for cart page
+        # Wait for cart page to load
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "cart_item"))
         )
@@ -201,10 +197,15 @@ def test_saucedemo_login_add_remove_items():
             button.click()
             time.sleep(0.5)
 
-        print("✅ Test completed: Logged in, added 3 items to cart, and removed them.")
+        print("✅ Test completed successfully.")
 
     except Exception as e:
-        print("❌ Test failed:", str(e))
+        print(f"❌ An error occurred: {e}")
+
     finally:
-        time.sleep(2)  # Let the user visually verify the result
+        time.sleep(2)
         driver.quit()
+
+
+# Run it
+test_saucedemo_login_add_remove_items()
