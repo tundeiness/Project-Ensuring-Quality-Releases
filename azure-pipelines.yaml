@@ -288,10 +288,6 @@ stages:
                     sudo npm install -g newman
                     sudo npm install -g newman-reporter-junitfull
 
-                    echo "📂 Checking Postman Collection Files..."
-                    ls -la "$(System.DefaultWorkingDirectory)/automatedtesting/postman"
-                    ls -la "$(System.DefaultWorkingDirectory)/automatedtesting/postman"
-
                     echo "🚀 Running Data Validation Collection..." 
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/data_validation_suite.json" \
                       -r cli,junitfull \
