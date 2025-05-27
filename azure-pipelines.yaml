@@ -146,9 +146,9 @@ stages:
           sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt -f install -y
 
           mkdir -p tests
-          touch tests/selenium-log.log
+          touch tests/newlog.log
 
-          python3 automatedtesting/selenium/login.py | tee tests/selenium-log.log
+          python3 automatedtesting/selenium/login.py | tee tests/newlog.log
 
           # echo "Running Selenium script..."
           # if [ -f automatedtesting/selenium/login.py ]; then
@@ -172,7 +172,7 @@ stages:
     - task: PublishPipelineArtifact@1
       displayName: 'Publish Selenium Logs'
       inputs:
-        targetPath: 'tests/selenium-log.log'
+        targetPath: 'tests/newlog.log'
         artifactName: 'selenium-logs'
 
 
