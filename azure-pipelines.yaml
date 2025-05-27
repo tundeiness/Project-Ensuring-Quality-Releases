@@ -129,102 +129,137 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: Bash@3
-            displayName: 'Configure Selenium on VM'
+          - script: |
+              # Create directories for test logs
+              sudo mkdir -p logs/tests/selenium
+              sudo mkdir -p /var/log/selenium
+              sudo chmod 777 /var/log/selenium
+              
+              # Navigate to build workspace and unzip artifacts
+              cd "$(Pipeline.Workspace)/$(BUILD_SELENIUM)"
+              unzip -o "$(Build.BuildId)-selenium.zip"
+              
+              # Install dependencies and run tests
+              pip install selenium
+              python3 -u selenium_tests.py
+
+              # Copy logs to VM log path
+              sudo cp logs/tests/selenium/selenium-tests.log /var/log/selenium/selenium-tests.log
+              
+              # Debug outputs
+              pwd
+              ls -la
+              ls -la /var/log
+              ls -la /var/log/selenium
+            displayName: 'Run Selenium tests'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Selenium test logs'
             inputs:
-              targetType: 'inline'
-              script: |
-                #!/bin/bash
-                set -e
+              targetPath: '$(Pipeline.Workspace)/$(BUILD_SELENIUM)/logs/tests/selenium/selenium-tests.log'
+              artifactName: '$(ARTIFACT_SELENIUM)'
 
-                mkdir -p $HOME/selenium-test
-                cd $HOME/selenium-test
 
-                sudo apt-get update
-                sudo apt-get upgrade -y
-                sudo apt-get install python3-pip unzip expect zip chromium-browser -y
+  #   strategy:
+  #     runOnce:
+  #       deploy:
+  #         steps:
+  #         - task: Bash@3
+  #           displayName: 'Configure Selenium on VM'
+  #           inputs:
+  #             targetType: 'inline'
+  #             script: |
+  #               #!/bin/bash
+  #               set -e
 
-                pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
+  #               mkdir -p $HOME/selenium-test
+  #               cd $HOME/selenium-test
 
-                rm -rf chromedriver*
-                wget -q https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
-                unzip -q chromedriver_linux64.zip
-                sudo mv chromedriver /usr/bin/
-                sudo chmod +x /usr/bin/chromedriver
-                rm chromedriver_linux64.zip
+  #               sudo apt-get update
+  #               sudo apt-get upgrade -y
+  #               sudo apt-get install python3-pip unzip expect zip chromium-browser -y
 
-  - job: SeleniumTests
-    displayName: 'Run Selenium Tests'
-    dependsOn: VirtualMachineDeploy
-    steps:
-    - task: Bash@3
-      displayName: 'Execute Selenium Test Suite'
-      inputs:
-        targetType: 'inline'
-        script: |
-          #!/bin/bash
-          set -e
+  #               pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
 
-          mkdir -p $HOME/selenium-test
-          cd $HOME/selenium-test
+  #               rm -rf chromedriver*
+  #               wget -q https://chromedriver.storage.googleapis.com/96.0.4664.18/chromedriver_linux64.zip
+  #               unzip -q chromedriver_linux64.zip
+  #               sudo mv chromedriver /usr/bin/
+  #               sudo chmod +x /usr/bin/chromedriver
+  #               rm chromedriver_linux64.zip
 
-          python3 -m pip install --upgrade pip
-          pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
+  # - job: SeleniumTests
+  #   displayName: 'Run Selenium Tests'
+  #   dependsOn: VirtualMachineDeploy
+  #   steps:
+  #   - task: Bash@3
+  #     displayName: 'Execute Selenium Test Suite'
+  #     inputs:
+  #       targetType: 'inline'
+  #       script: |
+  #         #!/bin/bash
+  #         set -e
 
-          cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
+  #         mkdir -p $HOME/selenium-test
+  #         cd $HOME/selenium-test
 
-          mkdir -p logs test-results
+  #         python3 -m pip install --upgrade pip
+  #         pip3 install selenium pytest pytest-html pytest-xdist pytest-nunit
 
-          echo "Starting Selenium test execution at $(date)" | tee logs/test-execution.log
+  #         cp -r $(System.DefaultWorkingDirectory)/automatedtesting .
 
-          python3 automatedtesting/selenium/login.py 2>&1 | tee logs/selenium-test-output.log
-          TEST_EXIT_CODE=${PIPESTATUS[0]}
+  #         mkdir -p logs test-results
 
-          echo "Test execution completed at $(date) with exit code: $TEST_EXIT_CODE" | tee -a logs/test-execution.log
+  #         echo "Starting Selenium test execution at $(date)" | tee logs/test-execution.log
 
-          echo "=== SELENIUM TEST SUMMARY ===" > test-results/test-summary.txt
-          echo "Execution Date: $(date)" >> test-results/test-summary.txt
-          echo "Test Script: automatedtesting/selenium/login.py" >> test-results/test-summary.txt
-          echo "Exit Code: $TEST_EXIT_CODE" >> test-results/test-summary.txt
-          echo "Log Files Generated:" >> test-results/test-summary.txt
-          echo "- logs/test-execution.log" >> test-results/test-summary.txt
-          echo "- logs/selenium-test-output.log" >> test-results/test-summary.txt
+  #         python3 automatedtesting/selenium/login.py 2>&1 | tee logs/selenium-test-output.log
+  #         TEST_EXIT_CODE=${PIPESTATUS[0]}
 
-          if [ $TEST_EXIT_CODE -eq 0 ]; then
-            echo "Status: PASSED" >> test-results/test-summary.txt
-          else
-            echo "Status: FAILED" >> test-results/test-summary.txt
-          fi
+  #         echo "Test execution completed at $(date) with exit code: $TEST_EXIT_CODE" | tee -a logs/test-execution.log
 
-          echo "" >> test-results/test-summary.txt
-          echo "Files in test directory:" >> test-results/test-summary.txt
-          find . -type f -newer automatedtesting/selenium/login.py 2>/dev/null >> test-results/test-summary.txt || echo "No new files created" >> test-results/test-summary.txt
+  #         echo "=== SELENIUM TEST SUMMARY ===" > test-results/test-summary.txt
+  #         echo "Execution Date: $(date)" >> test-results/test-summary.txt
+  #         echo "Test Script: automatedtesting/selenium/login.py" >> test-results/test-summary.txt
+  #         echo "Exit Code: $TEST_EXIT_CODE" >> test-results/test-summary.txt
+  #         echo "Log Files Generated:" >> test-results/test-summary.txt
+  #         echo "- logs/test-execution.log" >> test-results/test-summary.txt
+  #         echo "- logs/selenium-test-output.log" >> test-results/test-summary.txt
 
-          exit $TEST_EXIT_CODE
+  #         if [ $TEST_EXIT_CODE -eq 0 ]; then
+  #           echo "Status: PASSED" >> test-results/test-summary.txt
+  #         else
+  #           echo "Status: FAILED" >> test-results/test-summary.txt
+  #         fi
 
-    - task: Bash@3
-      displayName: 'Archive Test Results'
-      condition: always()
-      inputs:
-        targetType: 'inline'
-        script: |
-          #!/bin/bash
-          set -e
+  #         echo "" >> test-results/test-summary.txt
+  #         echo "Files in test directory:" >> test-results/test-summary.txt
+  #         find . -type f -newer automatedtesting/selenium/login.py 2>/dev/null >> test-results/test-summary.txt || echo "No new files created" >> test-results/test-summary.txt
 
-          cd $HOME/selenium-test
+  #         exit $TEST_EXIT_CODE
 
-          mkdir -p selenium-test-results
-          [ -d "logs" ] && cp -r logs selenium-test-results/
-          [ -d "test-results" ] && cp -r test-results selenium-test-results/
+  #   - task: Bash@3
+  #     displayName: 'Archive Test Results'
+  #     condition: always()
+  #     inputs:
+  #       targetType: 'inline'
+  #       script: |
+  #         #!/bin/bash
+  #         set -e
 
-          find . -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.html" -o -iname "*.xml" -o -iname "*.json" \) -exec cp {} selenium-test-results/ \; 2>/dev/null || true
+  #         cd $HOME/selenium-test
 
-          zip -r selenium-test-results.zip selenium-test-results/
-          cp selenium-test-results.zip $(System.DefaultWorkingDirectory)/
+  #         mkdir -p selenium-test-results
+  #         [ -d "logs" ] && cp -r logs selenium-test-results/
+  #         [ -d "test-results" ] && cp -r test-results selenium-test-results/
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Selenium Test Artifacts'
-      inputs:
-        PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test-results.zip'
-        ArtifactName: 'selenium-artifacts'
-        publishLocation: 'Container'
+  #         find . -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.html" -o -iname "*.xml" -o -iname "*.json" \) -exec cp {} selenium-test-results/ \; 2>/dev/null || true
+
+  #         zip -r selenium-test-results.zip selenium-test-results/
+  #         cp selenium-test-results.zip $(System.DefaultWorkingDirectory)/
+
+  #   - task: PublishBuildArtifacts@1
+  #     displayName: 'Publish Selenium Test Artifacts'
+  #     inputs:
+  #       PathtoPublish: '$(System.DefaultWorkingDirectory)/selenium-test-results.zip'
+  #       ArtifactName: 'selenium-artifacts'
+  #       publishLocation: 'Container'
