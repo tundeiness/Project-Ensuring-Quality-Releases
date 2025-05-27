@@ -206,3 +206,57 @@ stages:
                   script: |
                     ls -lah endurance-test-report/
                     cat jmeter.log
+
+- stage: StressTest
+  displayName: 'Stress Test Stage'
+  jobs:
+    - deployment: RunStressTest
+      displayName: 'Run Stress Test'
+      environment: 'test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+
+              - task: Bash@3
+                displayName: 'Clean stress report directory'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    rm -rf stress-test-report
+
+              - task: Bash@3
+                displayName: 'Install Java (OpenJDK 11)'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    sudo apt-get update
+                    sudo apt-get install -y openjdk-11-jdk
+                    java -version
+              - task: JMeterInstaller@0
+                displayName: 'Install JMeter'
+              - task: Bash@3
+                displayName: 'Execute Stress Test Suite'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    jmeter -n \
+                      -t automatedtesting/jmeter/stress.jmx \
+                      -l stress-test-report/stress-results.jtl \
+                      -e \
+                      -o stress-test-report
+
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish Stress Report'
+                inputs:
+                  PathtoPublish: 'stress-test-report'
+                  ArtifactName: 'stress-report'
+                  publishLocation: 'Container'
+
+              - task: Bash@3
+                displayName: 'Print Stress Logs'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    ls -lah stress-test-report/
+                    cat jmeter.log
