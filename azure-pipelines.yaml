@@ -56,14 +56,6 @@ stages:
               cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
               chmod 400 ~/.ssh/id_rsa
 
-        - task: AzureCLI@2
-          displayName: 'Azure Login for az CLI'
-          inputs:
-            azureSubscription: $(azureServiceConnectionId)
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: echo "Logged into Azure CLI"
-
         - task: Bash@3
           displayName: 'Terraform Init'
           env:
@@ -120,7 +112,6 @@ stages:
             targetType: 'inline'
             script: |
               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-
               vm_check=$(az vm show --name "$(vmImageName)" --resource-group Azuredevops --query "id" -o tsv 2>/dev/null || true)
 
               if [ ! -z "$vm_check" ]; then
@@ -129,6 +120,19 @@ stages:
               else
                 echo "VM does not exist. Skipping import."
               fi
+
+        - task: Bash@3
+          displayName: 'Terraform Plan'
+          env:
+            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+            ARM_TENANT_ID: $(ARM_TENANT_ID)
+          inputs:
+            targetType: 'inline'
+            script: |
+              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+              terraform plan -var-file=terraform.tfvars -out=tfplan
 
         - task: Bash@3
           displayName: 'Terraform Apply'
@@ -141,7 +145,8 @@ stages:
             targetType: 'inline'
             script: |
               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              terraform apply -auto-approve
+              terraform apply -auto-approve tfplan
+
 
 
 #         - task: ArchiveFiles@2
