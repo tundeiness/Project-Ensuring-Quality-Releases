@@ -128,43 +128,43 @@ stages:
               terraform apply -auto-approve tfplan
 
 
-#         - task: ArchiveFiles@2
-#           displayName: 'Archive FakeRestAPI'
-#           inputs:
-#             rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
-#             includeRootFolder: false
-#             archiveType: 'zip'
-#             archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+        - task: ArchiveFiles@2
+          displayName: 'Archive FakeRestAPI'
+          inputs:
+            rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
+            includeRootFolder: false
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
 
-#         - task: PublishBuildArtifacts@1
-#           displayName: 'Upload Package'
-#           inputs:
-#             PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-#             ArtifactName: 'drop-fakerestapi'
-#             publishLocation: 'Container'
+        - task: PublishBuildArtifacts@1
+          displayName: 'Upload Package'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+            ArtifactName: 'drop-fakerestapi'
+            publishLocation: 'Container'
 
-# - stage: Deploy
-#   jobs:
-#     - deployment: FakeRestAPI
-#       displayName: 'Deploy to Azure App Service'
-#       environment: 'test'
-#       strategy:
-#         runOnce:
-#           deploy:
-#             steps:
-#               - task: DownloadPipelineArtifact@2
-#                 displayName: 'Download Build Artifact'
-#                 inputs:
-#                   artifact: 'drop-fakerestapi'
-#                   path: '$(Pipeline.Workspace)'
+- stage: Deploy
+  jobs:
+    - deployment: FakeRestAPI
+      displayName: 'Deploy to Azure App Service'
+      environment: 'test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: DownloadPipelineArtifact@2
+                displayName: 'Download Build Artifact'
+                inputs:
+                  artifact: 'drop-fakerestapi'
+                  path: '$(Pipeline.Workspace)'
 
-#               - task: AzureWebApp@1
-#                 displayName: 'Deploy to Azure Web App'
-#                 inputs:
-#                   azureSubscription: 'ServiceConnex'
-#                   appName: 'myWebApp-AppService-bc8444f7'
-#                   appType: 'webApp'
-#                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+              - task: AzureWebApp@1
+                displayName: 'Deploy to Azure Web App'
+                inputs:
+                  azureSubscription: 'ServiceConnex'
+                  appName: 'myWebApp-AppService-4b920f48'
+                  appType: 'webApp'
+                  package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
 
 
 # - stage: EnduranceTest
