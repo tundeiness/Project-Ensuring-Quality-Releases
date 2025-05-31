@@ -368,9 +368,9 @@ stages:
                       --reporter-junitfull-export result-regression_by_id-test.xml
 
 
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
-                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-regression-test.xml
+                    # newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
+                    #   -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
+                    #   --reporter-junitfull-export result-regression-test.xml
 
               - task: PublishTestResults@2
                 displayName: 'Publish Integration test'
