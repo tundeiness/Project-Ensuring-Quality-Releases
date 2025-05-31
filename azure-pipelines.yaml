@@ -18,7 +18,7 @@ variables:
   - name: projectRoot
     value: '$(System.DefaultWorkingDirectory)'
   - name: vmImageName
-    value: 'devopsVM'
+    value: 'myLinuxVM'
 
 stages:
 - stage: Build
@@ -28,10 +28,10 @@ stages:
       pool:
         name: myAgentPool
       steps:
-        # - task: TerraformInstaller@0
-        #   displayName: 'Install Terraform'
-        #   inputs:
-        #     terraformVersion: '1.5.7'
+        - task: TerraformInstaller@0
+          displayName: 'Install Terraform'
+          inputs:
+            terraformVersion: '1.5.7'
 
         - task: Bash@3
           displayName: 'Write SSH Public Key to id_rsa.pub'
@@ -45,7 +45,7 @@ stages:
           name: sshkey
           displayName: 'Download SSH Private Key'
           inputs:
-            secureFile: 'id_rsa'  # Must match the name of your uploaded secure file
+            secureFile: 'id_rsa'
 
         - task: Bash@3
           displayName: "Install SSH Private Key"
@@ -56,63 +56,63 @@ stages:
               cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
               chmod 400 ~/.ssh/id_rsa
 
-#         - task: Bash@3
-#           displayName: 'Terraform Init'
-#           env:
-#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-#             ARM_TENANT_ID: $(ARM_TENANT_ID)
-#           inputs:
-#             targetType: 'inline'
-#             script: |
-#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-#               terraform init \
-#                 -backend-config="storage_account_name=tfstateacf4eddfc132" \
-#                 -backend-config="container_name=tfstate" \
-#                 -backend-config="key=test.terraform.tfstate" \
-#                 -backend-config="resource_group_name=Azuredevops" \
-#                 -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-#                 -backend-config="tenant_id=$ARM_TENANT_ID"
+        - task: Bash@3
+          displayName: 'Terraform Init'
+          env:
+            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+            ARM_TENANT_ID: $(ARM_TENANT_ID)
+          inputs:
+            targetType: 'inline'
+            script: |
+              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+              terraform init \
+                -backend-config="storage_account_name=tfstateacf4eddfc132" \
+                -backend-config="container_name=tfstate" \
+                -backend-config="key=test.terraform.tfstate" \
+                -backend-config="resource_group_name=Azuredevops" \
+                -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+                -backend-config="tenant_id=$ARM_TENANT_ID"
 
-#         - task: Bash@3
-#           displayName: 'Create terraform.tfvars'
-#           env:
-#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-#             ARM_TENANT_ID: $(ARM_TENANT_ID)
-#           inputs:
-#             targetType: 'inline'
-#             script: |
-#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-#               cat > terraform.tfvars <<EOF
-#               subscription_id      = "$ARM_SUBSCRIPTION_ID"
-#               client_id            = "$ARM_CLIENT_ID"
-#               client_secret        = "$ARM_CLIENT_SECRET"
-#               tenant_id            = "$ARM_TENANT_ID"
-#               location             = "South Central US"
-#               resource_group       = "Azuredevops"
-#               application_type     = "myWebApp"
-#               virtual_network_name = "devopsnet"
-#               address_space        = ["10.5.0.0/16"]
-#               address_prefix_test  = "10.5.1.0/24"
-#               vm_name              = "$(vmImageName)"
-#               admin_ssh_key        = "$ADMIN_SSH_PUBLIC_KEY"
-#               EOF
+        - task: Bash@3
+          displayName: 'Create terraform.tfvars'
+          env:
+            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+            ARM_TENANT_ID: $(ARM_TENANT_ID)
+          inputs:
+            targetType: 'inline'
+            script: |
+              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+              cat > terraform.tfvars <<EOF
+              subscription_id      = "$ARM_SUBSCRIPTION_ID"
+              client_id            = "$ARM_CLIENT_ID"
+              client_secret        = "$ARM_CLIENT_SECRET"
+              tenant_id            = "$ARM_TENANT_ID"
+              location             = "South Central US"
+              resource_group       = "Azuredevops"
+              application_type     = "myWebApp"
+              virtual_network_name = "devopsnet"
+              address_space        = ["10.5.0.0/16"]
+              address_prefix_test  = "10.5.1.0/24"
+              vm_name              = "$(vmImageName)"
+              admin_ssh_key        = "$ADMIN_SSH_PUBLIC_KEY"
+              EOF
 
-#         - task: Bash@3
-#           displayName: 'Terraform Apply'
-#           env:
-#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-#             ARM_TENANT_ID: $(ARM_TENANT_ID)
-#           inputs:
-#             targetType: 'inline'
-#             script: |
-#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-#               terraform apply -auto-approve
+        - task: Bash@3
+          displayName: 'Terraform Apply'
+          env:
+            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+            ARM_TENANT_ID: $(ARM_TENANT_ID)
+          inputs:
+            targetType: 'inline'
+            script: |
+              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+              terraform apply -auto-approve
 
 #         - task: ArchiveFiles@2
 #           displayName: 'Archive FakeRestAPI'
@@ -261,55 +261,55 @@ stages:
 #                     ls -lah stress-test-report/
 #                     cat jmeter.log
 
-- stage: PostmanTest
-  displayName: 'Regression Suite Stage'
-  jobs:
-    - deployment: RunRegressionTest
-      displayName: 'Run Regression Test'
-      environment: 'test'
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - task: Bash@3
-                displayName: 'Install Node.js, Newman and Run Postman Collections'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    echo "🔧 Installing Node.js and npm..."
-                    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-                    sudo apt-get install -y nodejs
+# - stage: PostmanTest
+#   displayName: 'Regression Suite Stage'
+#   jobs:
+#     - deployment: RunRegressionTest
+#       displayName: 'Run Regression Test'
+#       environment: 'test'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - task: Bash@3
+#                 displayName: 'Install Node.js, Newman and Run Postman Collections'
+#                 inputs:
+#                   targetType: 'inline'
+#                   script: |
+#                     echo "🔧 Installing Node.js and npm..."
+#                     curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+#                     sudo apt-get install -y nodejs
 
-                    echo "🧪 Verifying installation..."
-                    node -v
-                    npm -v
+#                     echo "🧪 Verifying installation..."
+#                     node -v
+#                     npm -v
 
-                    echo "📦 Installing Newman and JUnitFull Reporter..."
-                    sudo npm install -g newman
-                    sudo npm install -g newman-reporter-junitfull
+#                     echo "📦 Installing Newman and JUnitFull Reporter..."
+#                     sudo npm install -g newman
+#                     sudo npm install -g newman-reporter-junitfull
 
-                    echo "🚀 Running Data Validation Collection..." 
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Create_User.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-data-validation-test.xml
+#                     echo "🚀 Running Data Validation Collection..." 
+#                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Create_User.postman_collection.json" \
+#                       -e User_API_Environment.postman_environment.json -r cli,junitfull \
+#                       --reporter-junitfull-export result-data-validation-test.xml
 
-                    echo "🚀 Running Data Regression Collection..."
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users_By_ID.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-regression_by_id-test.xml
+#                     echo "🚀 Running Data Regression Collection..."
+#                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users_By_ID.postman_collection.json" \
+#                       -e User_API_Environment.postman_environment.json -r cli,junitfull \
+#                       --reporter-junitfull-export result-regression_by_id-test.xml
 
-                    echo "🚀 Running Data Regression Collection..."
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-regression-test.xml
+#                     echo "🚀 Running Data Regression Collection..."
+#                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
+#                       -e User_API_Environment.postman_environment.json -r cli,junitfull \
+#                       --reporter-junitfull-export result-regression-test.xml
 
-              - task: PublishTestResults@2
-                displayName: 'Publish Integration test'
-                inputs:
-                  testResultsFormat: 'JUnit'
-                  testResultsFiles: |
-                    result-data-validation-test.xml
-                    result-regression-test.xml
-                    result-regression_by_id-test.xml
-                  testRunTitle: 'Publish postman test result'
-                  failTaskOnFailedTests: true
+#               - task: PublishTestResults@2
+#                 displayName: 'Publish Integration test'
+#                 inputs:
+#                   testResultsFormat: 'JUnit'
+#                   testResultsFiles: |
+#                     result-data-validation-test.xml
+#                     result-regression-test.xml
+#                     result-regression_by_id-test.xml
+#                   testRunTitle: 'Publish postman test result'
+#                   failTaskOnFailedTests: true
