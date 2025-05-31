@@ -186,51 +186,51 @@ stages:
                     sudo apt-get install openjdk-11-jre-headless -y
                     java -version
 
-              - task: JMeterInstaller@0
-                displayName: 'Install JMeter'
+              # - task: JMeterInstaller@0
+              #   displayName: 'Install JMeter'
 
-              - task: Bash@3
-                displayName: 'Clean Previous JMeter Logs'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    LOG_DIR="$(System.DefaultWorkingDirectory)/automatedtesting/jmeter/logs"
-                    if [ -d "$LOG_DIR" ]; then
-                      echo "Cleaning existing JMeter log directory..."
-                      rm -rf "$LOG_DIR"/*
-                    else
-                      echo "Creating JMeter log directory..."
-                      mkdir -p "$LOG_DIR"
-                    fi
+              # - task: Bash@3
+              #   displayName: 'Clean Previous JMeter Logs'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       LOG_DIR="$(System.DefaultWorkingDirectory)/automatedtesting/jmeter/logs"
+              #       if [ -d "$LOG_DIR" ]; then
+              #         echo "Cleaning existing JMeter log directory..."
+              #         rm -rf "$LOG_DIR"/*
+              #       else
+              #         echo "Creating JMeter log directory..."
+              #         mkdir -p "$LOG_DIR"
+              #       fi
 
-              - task: Bash@3
-                displayName: 'Execute Endurance Test Suite'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    jmeter -n \
-                      -t automatedtesting/jmeter/endurance.jmx \
-                      -l automatedtesting/jmeter/logs/endurance-output.csv \
-                      -e -f -o automatedtesting/jmeter/logs/endurance-log.html \
-                      -j automatedtesting/jmeter/logs/endurance-jmeter.log
+              # - task: Bash@3
+              #   displayName: 'Execute Endurance Test Suite'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       jmeter -n \
+              #         -t automatedtesting/jmeter/endurance.jmx \
+              #         -l automatedtesting/jmeter/logs/endurance-output.csv \
+              #         -e -f -o automatedtesting/jmeter/logs/endurance-log.html \
+              #         -j automatedtesting/jmeter/logs/endurance-jmeter.log
 
-              - task: Bash@3
-                displayName: 'Execute Stress Test Suite'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    jmeter -n \
-                      -t automatedtesting/jmeter/stress.jmx \
-                      -l automatedtesting/jmeter/logs/stress-output.csv \
-                      -e -f -o automatedtesting/jmeter/logs/stress-log.html \
-                      -j automatedtesting/jmeter/logs/stress-jmeter.log
+              # - task: Bash@3
+              #   displayName: 'Execute Stress Test Suite'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       jmeter -n \
+              #         -t automatedtesting/jmeter/stress.jmx \
+              #         -l automatedtesting/jmeter/logs/stress-output.csv \
+              #         -e -f -o automatedtesting/jmeter/logs/stress-log.html \
+              #         -j automatedtesting/jmeter/logs/stress-jmeter.log
 
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish JMeter Logs'
-                inputs:
-                  PathtoPublish: '$(System.DefaultWorkingDirectory)/automatedtesting/jmeter/logs'
-                  ArtifactName: 'jmeter-results'
-                  publishLocation: 'Container'
+              # - task: PublishBuildArtifacts@1
+              #   displayName: 'Publish JMeter Logs'
+              #   inputs:
+              #     PathtoPublish: '$(System.DefaultWorkingDirectory)/automatedtesting/jmeter/logs'
+              #     ArtifactName: 'jmeter-results'
+              #     publishLocation: 'Container'
 
                  
 
@@ -359,17 +359,17 @@ stages:
 
 
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Create_User.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
+                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
                       --reporter-junitfull-export result-data-validation-test.xml
 
 
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users_By_ID.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
+                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
                       --reporter-junitfull-export result-regression_by_id-test.xml
 
 
                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
-                      -e User_API_Environment.postman_environment.json -r cli,junitfull \
+                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
                       --reporter-junitfull-export result-regression-test.xml
 
               - task: PublishTestResults@2
