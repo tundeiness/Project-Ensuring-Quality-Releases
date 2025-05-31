@@ -18,7 +18,7 @@ variables:
   - name: projectRoot
     value: '$(System.DefaultWorkingDirectory)'
   - name: vmImageName
-    value: 'myLinuxVM'
+    value: 'devopsVM'
 
 stages:
 - stage: Build
@@ -102,26 +102,6 @@ stages:
               EOF
 
         - task: Bash@3
-          displayName: 'Terraform Import VM if Exists'
-          env:
-            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-            ARM_TENANT_ID: $(ARM_TENANT_ID)
-          inputs:
-            targetType: 'inline'
-            script: |
-              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              vm_check=$(az vm show --name "$(vmImageName)" --resource-group Azuredevops --query "id" -o tsv 2>/dev/null || true)
-
-              if [ ! -z "$vm_check" ]; then
-                echo "VM exists. Importing into Terraform state..."
-                terraform import "module.vm.azurerm_linux_virtual_machine.vm" "$vm_check" || true
-              else
-                echo "VM does not exist. Skipping import."
-              fi
-
-        - task: Bash@3
           displayName: 'Terraform Plan'
           env:
             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
@@ -146,7 +126,6 @@ stages:
             script: |
               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
               terraform apply -auto-approve tfplan
-
 
 
 #         - task: ArchiveFiles@2
