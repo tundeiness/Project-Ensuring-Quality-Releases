@@ -5,9 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
 import logging as log
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 import time
 
 # Configure logging
@@ -20,13 +22,13 @@ def login_to_sauce_demo():
     """Login to the SauceDemo website and return the driver instance"""
     log.info("Starting login process...")
 
-    # options = Options()
-    ChromeOptions.add_argument('--headless')
-    ChromeOptions.add_argument('--no-sandbox')
-    ChromeOptions.add_argument('--disable-dev-shm-usage')
+    options = ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
 
     service = Service()
-    driver = webdriver.Chrome(service=service, options=ChromeOptions)
+    driver = webdriver.Chrome(service=service, options=options)
 
     driver.get("https://www.saucedemo.com/")
     log.info("Navigate to SauceDemo homepage.")
@@ -34,7 +36,7 @@ def login_to_sauce_demo():
     username_field = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "user-name"))
     )
-    username_field.send_keys("visual_user")
+    username_field.send_keys("standard_user")
 
     password_field = driver.find_element(By.ID, "password")
     password_field.send_keys("secret_sauce")
@@ -48,28 +50,41 @@ def login_to_sauce_demo():
 
     return driver
 
+
 def add_items_to_cart(driver):
-    """Add 3 items to the cart and navigate to cart page"""
     log.info("Adding items to cart...")
 
-    add_to_cart_buttons = WebDriverWait(driver, 10).until(
-        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "button[data-test^='add-to-cart']"))
+    inventory_items = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.CLASS_NAME, "inventory_item"))
     )
 
-    for i in range(min(6, len(add_to_cart_buttons))):
-        item_name = driver.find_element(By.XPATH, f"(//div[@class='inventory_item_name'])[{i+1}]").text
-        add_to_cart_buttons[i].click()
+    for i, item in enumerate(inventory_items[:3]):
+        item_name = item.find_element(By.CLASS_NAME, "inventory_item_name").text
+        add_button = item.find_element(By.TAG_NAME, "button")
+        add_button.click()
         log.info(f"Added '{item_name}' to cart.")
 
     cart_link = driver.find_element(By.CLASS_NAME, "shopping_cart_link")
     cart_link.click()
 
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "cart_list"))
-    )
-    log.info("Navigated to cart page.")
+    # Debugging info
+    log.debug(f"Current URL after clicking cart: {driver.current_url}")
+    time.sleep(1)  # TEMPORARY: helps confirm it's a timing issue
 
-    return driver
+    try:
+        # Try checking for unique cart title or any stable element
+        WebDriverWait(driver, 10).until(
+            EC.any_of(
+                EC.presence_of_element_located((By.CLASS_NAME, "cart_list")),
+                EC.presence_of_element_located((By.XPATH, "//span[text()='Your Cart']"))  # Saucedemo uses this header
+            )
+        )
+        log.info("Navigated to cart page.")
+    except TimeoutException:
+        driver.save_screenshot("cart_error.png")
+        log.error("Cart page did not load properly or expected elements not visible.")
+        raise
+
 
 def remove_items_from_cart(driver):
     """Remove 2 items from the cart"""

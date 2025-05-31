@@ -1,0 +1,89 @@
+{
+	"info": {
+		"_postman_id": "fdcc2d2d-e9d0-4ca9-980e-91a199859693",
+		"name": "Create User",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "10335899",
+		"_collection_link": "https://udacity-7965.postman.co/workspace/6cd90730-60d7-4858-8b87-e5acc9f62be4/collection/10335899-fdcc2d2d-e9d0-4ca9-980e-91a199859693?action=share&source=collection_link&creator=10335899"
+	},
+	"item": [
+		{
+			"name": "POST Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Successful response\", function () {",
+							"    pm.expect(pm.response.code).to.equal(200);",
+							"});",
+							"",
+							"var json = pm.response.json();",
+							"if (json && json.id) {",
+							"    pm.environment.set(\"user_id\", json.id);",
+							"    console.log(\"User ID set to:\", json.id);",
+							"} else {",
+							"    console.warn(\"No user ID found in response.\");",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": 0,\n  \"userName\": \"John Doe\",\n  \"password\": \"SecurePassword123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Users",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"Users"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://fakerestapi.azurewebsites.net/api/v1",
+			"type": "string"
+		}
+	]
+}
