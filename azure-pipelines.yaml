@@ -167,59 +167,79 @@ stages:
                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
 
 
-# - stage: EnduranceTest
-#   displayName: 'Endurance Test Stage'
-#   jobs:
-#     - deployment: RunEnduranceTest
-#       displayName: 'Run Endurance Test'
-#       environment: 'test'
-#       strategy:
-#         runOnce:
-#           deploy:
-#             steps:
+- stage: PerformanceTest
+  displayName: 'Performance Test Stage'
+  jobs:
+    - deployment: RunPerformanceTest
+      displayName: 'Run Performance Test'
+      environment: 'test'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
 
-#               - task: Bash@3
-#                 displayName: 'Clean endurance report directory'
-#                 inputs:
-#                   targetType: 'inline'
-#                   script: |
-#                     rm -rf endurance-test-report
+              - task: Bash@3
+                displayName: 'Install Java (OpenJDK 11)'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    sudo apt-get update
+                    sudo apt-get install -y openjdk-11-jdk
+                    java -version
+              - task: JMeterInstaller@0
+                displayName: 'Install JMeter'
+              - task: Bash@3
+                displayName: 'Execute Endurance Test Suite'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    jmeter -n \
+                      -t automatedtesting/jmeter/endurance.jmx \
+                      -l endurance-test-report/endurance-results.jtl \
+                      -e \
+                      -o endurance-test-report
 
-#               - task: Bash@3
-#                 displayName: 'Install Java (OpenJDK 11)'
-#                 inputs:
-#                   targetType: 'inline'
-#                   script: |
-#                     sudo apt-get update
-#                     sudo apt-get install -y openjdk-11-jdk
-#                     java -version
-#               - task: JMeterInstaller@0
-#                 displayName: 'Install JMeter'
-#               - task: Bash@3
-#                 displayName: 'Execute Endurance Test Suite'
-#                 inputs:
-#                   targetType: 'inline'
-#                   script: |
-#                     jmeter -n \
-#                       -t automatedtesting/jmeter/endurance.jmx \
-#                       -l endurance-test-report/endurance-results.jtl \
-#                       -e \
-#                       -o endurance-test-report
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish Endurance Report'
+                inputs:
+                  PathtoPublish: 'endurance-test-report'
+                  ArtifactName: 'endurance-report'
+                  publishLocation: 'Container'
 
-#               - task: PublishBuildArtifacts@1
-#                 displayName: 'Publish Endurance Report'
-#                 inputs:
-#                   PathtoPublish: 'endurance-test-report'
-#                   ArtifactName: 'endurance-report'
-#                   publishLocation: 'Container'
+              - task: Bash@3
+                displayName: 'Print Endurance Logs'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    ls -lah endurance-test-report/
+                    cat jmeter.log
 
-#               - task: Bash@3
-#                 displayName: 'Print Endurance Logs'
-#                 inputs:
-#                   targetType: 'inline'
-#                   script: |
-#                     ls -lah endurance-test-report/
-#                     cat jmeter.log
+              - task: Bash@3
+                displayName: 'Execute Stress Test Suite'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    jmeter -n \
+                      -t automatedtesting/jmeter/stress.jmx \
+                      -l stress-test-report/stress-results.jtl \
+                      -e \
+                      -o stress-test-report
+
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish Stress Report'
+                inputs:
+                  PathtoPublish: 'stress-test-report'
+                  ArtifactName: 'stress-report'
+                  publishLocation: 'Container'
+
+              - task: Bash@3
+                displayName: 'Print Stress Logs'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    ls -lah stress-test-report/
+                    cat jmeter.log
+
 
 # - stage: StressTest
 #   displayName: 'Stress Test Stage'
