@@ -47,124 +47,124 @@ stages:
           inputs:
             secureFile: 'id_rsa'
 
-        - task: Bash@3
-          displayName: "Install SSH Private Key"
-          inputs:
-            targetType: 'inline'
-            script: |
-              mkdir -p ~/.ssh
-              cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
-              chmod 400 ~/.ssh/id_rsa
+#         - task: Bash@3
+#           displayName: "Install SSH Private Key"
+#           inputs:
+#             targetType: 'inline'
+#             script: |
+#               mkdir -p ~/.ssh
+#               cp $(sshkey.secureFilePath) ~/.ssh/id_rsa
+#               chmod 400 ~/.ssh/id_rsa
 
-        - task: Bash@3
-          displayName: 'Terraform Init'
-          env:
-            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-            ARM_TENANT_ID: $(ARM_TENANT_ID)
-          inputs:
-            targetType: 'inline'
-            script: |
-              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              terraform init \
-                -backend-config="storage_account_name=tfstateacf4eddfc132" \
-                -backend-config="container_name=tfstate" \
-                -backend-config="key=test.terraform.tfstate" \
-                -backend-config="resource_group_name=Azuredevops" \
-                -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-                -backend-config="tenant_id=$ARM_TENANT_ID"
+#         - task: Bash@3
+#           displayName: 'Terraform Init'
+#           env:
+#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+#             ARM_TENANT_ID: $(ARM_TENANT_ID)
+#           inputs:
+#             targetType: 'inline'
+#             script: |
+#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+#               terraform init \
+#                 -backend-config="storage_account_name=tfstateacf4eddfc132" \
+#                 -backend-config="container_name=tfstate" \
+#                 -backend-config="key=test.terraform.tfstate" \
+#                 -backend-config="resource_group_name=Azuredevops" \
+#                 -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
+#                 -backend-config="tenant_id=$ARM_TENANT_ID"
 
-        - task: Bash@3
-          displayName: 'Create terraform.tfvars'
-          env:
-            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-            ARM_TENANT_ID: $(ARM_TENANT_ID)
-          inputs:
-            targetType: 'inline'
-            script: |
-              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              cat > terraform.tfvars <<EOF
-              subscription_id      = "$ARM_SUBSCRIPTION_ID"
-              client_id            = "$ARM_CLIENT_ID"
-              client_secret        = "$ARM_CLIENT_SECRET"
-              tenant_id            = "$ARM_TENANT_ID"
-              location             = "South Central US"
-              resource_group       = "Azuredevops"
-              application_type     = "myWebApp"
-              virtual_network_name = "devopsnet"
-              address_space        = ["10.5.0.0/16"]
-              address_prefix_test  = "10.5.1.0/24"
-              vm_name              = "$(vmImageName)"
-              admin_ssh_key        = "$ADMIN_SSH_PUBLIC_KEY"
-              EOF
+#         - task: Bash@3
+#           displayName: 'Create terraform.tfvars'
+#           env:
+#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+#             ARM_TENANT_ID: $(ARM_TENANT_ID)
+#           inputs:
+#             targetType: 'inline'
+#             script: |
+#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+#               cat > terraform.tfvars <<EOF
+#               subscription_id      = "$ARM_SUBSCRIPTION_ID"
+#               client_id            = "$ARM_CLIENT_ID"
+#               client_secret        = "$ARM_CLIENT_SECRET"
+#               tenant_id            = "$ARM_TENANT_ID"
+#               location             = "South Central US"
+#               resource_group       = "Azuredevops"
+#               application_type     = "myWebApp"
+#               virtual_network_name = "devopsnet"
+#               address_space        = ["10.5.0.0/16"]
+#               address_prefix_test  = "10.5.1.0/24"
+#               vm_name              = "$(vmImageName)"
+#               admin_ssh_key        = "$ADMIN_SSH_PUBLIC_KEY"
+#               EOF
 
-        - task: Bash@3
-          displayName: 'Terraform Plan'
-          env:
-            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-            ARM_TENANT_ID: $(ARM_TENANT_ID)
-          inputs:
-            targetType: 'inline'
-            script: |
-              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              terraform plan -var-file=terraform.tfvars -out=tfplan
+#         - task: Bash@3
+#           displayName: 'Terraform Plan'
+#           env:
+#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+#             ARM_TENANT_ID: $(ARM_TENANT_ID)
+#           inputs:
+#             targetType: 'inline'
+#             script: |
+#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+#               terraform plan -var-file=terraform.tfvars -out=tfplan
 
-        - task: Bash@3
-          displayName: 'Terraform Apply'
-          env:
-            ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-            ARM_TENANT_ID: $(ARM_TENANT_ID)
-          inputs:
-            targetType: 'inline'
-            script: |
-              cd $(System.DefaultWorkingDirectory)/terraform/environments/test
-              terraform apply -auto-approve tfplan
+#         - task: Bash@3
+#           displayName: 'Terraform Apply'
+#           env:
+#             ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+#             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+#             ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+#             ARM_TENANT_ID: $(ARM_TENANT_ID)
+#           inputs:
+#             targetType: 'inline'
+#             script: |
+#               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
+#               terraform apply -auto-approve tfplan
 
 
-        - task: ArchiveFiles@2
-          displayName: 'Archive FakeRestAPI'
-          inputs:
-            rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
-            includeRootFolder: false
-            archiveType: 'zip'
-            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+#         - task: ArchiveFiles@2
+#           displayName: 'Archive FakeRestAPI'
+#           inputs:
+#             rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
+#             includeRootFolder: false
+#             archiveType: 'zip'
+#             archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
 
-        - task: PublishBuildArtifacts@1
-          displayName: 'Upload Package'
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-            ArtifactName: 'drop-fakerestapi'
-            publishLocation: 'Container'
+#         - task: PublishBuildArtifacts@1
+#           displayName: 'Upload Package'
+#           inputs:
+#             PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+#             ArtifactName: 'drop-fakerestapi'
+#             publishLocation: 'Container'
 
-- stage: Deploy
-  jobs:
-    - deployment: FakeRestAPI
-      displayName: 'Deploy to Azure App Service'
-      environment: 'test'
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - task: DownloadPipelineArtifact@2
-                displayName: 'Download Build Artifact'
-                inputs:
-                  artifact: 'drop-fakerestapi'
-                  path: '$(Pipeline.Workspace)'
+# - stage: Deploy
+#   jobs:
+#     - deployment: FakeRestAPI
+#       displayName: 'Deploy to Azure App Service'
+#       environment: 'test'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - task: DownloadPipelineArtifact@2
+#                 displayName: 'Download Build Artifact'
+#                 inputs:
+#                   artifact: 'drop-fakerestapi'
+#                   path: '$(Pipeline.Workspace)'
 
-              - task: AzureWebApp@1
-                displayName: 'Deploy to Azure Web App'
-                inputs:
-                  azureSubscription: 'ServiceConnex'
-                  appName: 'myWebApp-AppService-4b920f48'
-                  appType: 'webApp'
-                  package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+#               - task: AzureWebApp@1
+#                 displayName: 'Deploy to Azure Web App'
+#                 inputs:
+#                   azureSubscription: 'ServiceConnex'
+#                   appName: 'myWebApp-AppService-4b920f48'
+#                   appType: 'webApp'
+#                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
 
 
 - stage: PerformanceTest
