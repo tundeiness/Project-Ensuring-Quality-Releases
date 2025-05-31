@@ -184,7 +184,7 @@ stages:
                   targetType: 'inline'
                   script: |
                     sudo apt-get update
-                    sudo apt-get install -y openjdk-11-jdk
+                    sudo apt-get install openjdk-11-jre-headless -y
                     java -version
               - task: JMeterInstaller@0
                 displayName: 'Install JMeter'
@@ -195,24 +195,9 @@ stages:
                   script: |
                     jmeter -n \
                       -t automatedtesting/jmeter/endurance.jmx \
-                      -l endurance-test-report/endurance-results.jtl \
-                      -e \
-                      -o endurance-test-report
-
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish Endurance Report'
-                inputs:
-                  PathtoPublish: 'endurance-test-report'
-                  ArtifactName: 'endurance-report'
-                  publishLocation: 'Container'
-
-              - task: Bash@3
-                displayName: 'Print Endurance Logs'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    ls -lah endurance-test-report/
-                    cat jmeter.log
+                      -l automatedtesting/jmeter/logs/endurance-output.csv \
+                      -e -f -o automatedtesting/jmeter/logs/endurance-log.html\
+                      -j automatedtesting/jmeter/logs/endurance-jmeter.log
 
               - task: Bash@3
                 displayName: 'Execute Stress Test Suite'
@@ -221,24 +206,51 @@ stages:
                   script: |
                     jmeter -n \
                       -t automatedtesting/jmeter/stress.jmx \
-                      -l stress-test-report/stress-results.jtl \
-                      -e \
-                      -o stress-test-report
+                      -l automatedtesting/jmeter/logs/stress-output.csv \
+                      -e -f -o automatedtesting/jmeter/logs/stress-log.html\
+                      -j automatedtesting/jmeter/logs/stress-jmeter.log
+                 
 
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish Stress Report'
-                inputs:
-                  PathtoPublish: 'stress-test-report'
-                  ArtifactName: 'stress-report'
-                  publishLocation: 'Container'
+              # - task: PublishBuildArtifacts@1
+              #   displayName: 'Publish Endurance Report'
+              #   inputs:
+              #     PathtoPublish: 'endurance-test-report'
+              #     ArtifactName: 'endurance-report'
+              #     publishLocation: 'Container'
 
-              - task: Bash@3
-                displayName: 'Print Stress Logs'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    ls -lah stress-test-report/
-                    cat jmeter.log
+              # - task: Bash@3
+              #   displayName: 'Print Endurance Logs'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       ls -lah endurance-test-report/
+              #       cat jmeter.log
+
+              # - task: Bash@3
+              #   displayName: 'Execute Stress Test Suite'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       jmeter -n \
+              #         -t automatedtesting/jmeter/stress.jmx \
+              #         -l stress-test-report/stress-results.jtl \
+              #         -e \
+              #         -o stress-test-report
+
+              # - task: PublishBuildArtifacts@1
+              #   displayName: 'Publish Stress Report'
+              #   inputs:
+              #     PathtoPublish: 'stress-test-report'
+              #     ArtifactName: 'stress-report'
+              #     publishLocation: 'Container'
+
+              # - task: Bash@3
+              #   displayName: 'Print Stress Logs'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       ls -lah stress-test-report/
+              #       cat jmeter.log
 
 
 # - stage: StressTest
