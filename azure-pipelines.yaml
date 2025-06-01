@@ -147,7 +147,7 @@ stages:
 #   jobs:
 #     - deployment: FakeRestAPI
 #       displayName: 'Deploy to Azure App Service'
-#       environment: 'test'
+#       environment: 'taskVM'
 #       strategy:
 #         runOnce:
 #           deploy:
@@ -172,7 +172,7 @@ stages:
   jobs:
     - deployment: RunPerformanceTest
       displayName: 'Run Performance Test'
-      environment: 'test'
+      environment: 'tasksVM'
       strategy:
         runOnce:
           deploy:
