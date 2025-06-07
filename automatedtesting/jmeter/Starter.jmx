@@ -26,7 +26,7 @@
       <hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-          <stringProp name="HTTPSampler.domain">fakerestapi.azurewebsites.net</stringProp>
+          <stringProp name="HTTPSampler.domain">mywebapp-appservice-ca68f018.azurewebsites.net</stringProp>
           <stringProp name="HTTPSampler.port"/>
           <stringProp name="HTTPSampler.protocol">https</stringProp>
           <stringProp name="HTTPSampler.contentEncoding"/>
