@@ -190,18 +190,21 @@ stages:
                 displayName: 'Install JMeter'
                 # inputs:
                 #   jmeterVersion: '5.2.1'
-              - task: Bash@3
-                displayName: 'Run Jmeter test'
+                - task: Bash@3
+                displayName: 'Run JMeter test'
                 inputs:
                   targetType: 'inline'
                   script: |
-                    jmeter -n -t automatedtesting/jmeter/Starter.jmx -Jresdir=automatedtesting/jmeter/id.csv
+                    jmeter -n -t automatedtesting/jmeter/Starter.jmx \
+                           -l automatedtesting/jmeter/results.jtl \
+                           -Jresdir=automatedtesting/jmeter/id.csv
 
-                    jmeter -n \
-                      -t automatedtesting/jmeter/endurance.jmx \
-                      -l automatedtesting/jmeter/logs/endurance-output.csv \
-                      -e -f -o automatedtesting/jmeter/logs/endurance-log.html \
-                      -j automatedtesting/jmeter/logs/endurance-jmeter.log
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish JMeter Results'
+                inputs:
+                  PathtoPublish: 'automatedtesting/jmeter'
+                  ArtifactName: 'JMeterResults'
+                  publishLocation: 'Container'
 
               # - task: JMeterInstaller@0
               #   displayName: 'Install JMeter'
