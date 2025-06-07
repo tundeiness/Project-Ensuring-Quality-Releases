@@ -194,10 +194,11 @@ stages:
                 inputs:
                   targetType: 'inline'
                   script: |
-                    jmeter -n -t automatedtesting/jmeter/Starter.jmx \
-                      -l automatedtesting/jmeter/logs/test-output.csv \
-                      -e -f -o automatedtesting/jmeter/logs/test-log.html \
-                      -j automatedtesting/jmeter/logs/jmeter.log
+                    jmeter -n \
+                      -t automatedtesting/jmeter/Starter.jmx \
+                      -l automatedtesting/jmeter/results.jtl \
+                      -e -o automatedtesting/jmeter/report
+
 
               # - task: Bash@3
               #   displayName: 'Endurance Test Suite'
