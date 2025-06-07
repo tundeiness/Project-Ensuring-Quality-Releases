@@ -167,7 +167,7 @@ stages:
 #                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
 
 
-- stage: PerformanceTest
+- stage: Performance
   displayName: 'Performance Test Stage'
   jobs:
     - deployment: RunPerformanceTest
@@ -191,21 +191,52 @@ stages:
                 # inputs:
                 #   jmeterVersion: '5.2.1'
               - task: Bash@3
-                displayName: 'Run JMeter test'
+                displayName: 'Endurance Test Suite'
                 inputs:
                   targetType: 'inline'
                   script: |
-                    jmeter -n -t automatedtesting/jmeter/Starter.jmx \
-                           -l automatedtesting/jmeter/results.jtl \
-                           -Jresdir=automatedtesting/jmeter/id.csv
-
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish JMeter Results'
+                    jmeter -n \
+                      -t automatedtesting/jmeter/endurance.jmx \
+                      -l endurance-test-report/endurance-results.jtl \
+                      -e \
+                      -o endurance-test-report
+          
+              - task: publishhtmlreport@1
+                displayName: 'Publish Endurance Test Results'
                 inputs:
-                  PathtoPublish: 'automatedtesting/jmeter'
-                  ArtifactName: 'JMeterResults'
-                  publishLocation: 'Container'
-
+                  htmlType: 'Jmeter'
+                  JmeterReportsPath: '$(Build.SourcesDirectory)/endurance-test-report' 
+                 
+              
+              - task: Bash@3
+                displayName: 'Stress Test Suite'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    jmeter -n \
+                      -t automatedtesting/jmeter/stress.jmx \
+                      -l stress-test-report/stress-results.jtl \
+                      -e \
+                      -o stress-test-report
+            
+              - task: publishhtmlreport@1
+                displayName: 'Publish Stress Test Results'
+                inputs:
+                  htmlType: 'Jmeter'
+                  JmeterReportsPath: '$(Build.SourcesDirectory)/stress-test-report'    
+                    
+                    
+              - task: Bash@3
+                displayName: 'Print Performance Test Logs'
+                inputs:
+                  targetType: 'inline'
+                  script: |
+                    ls -lah endurance-test-report/
+                    ls -lah stress-test-report/
+                    cat jmeter.log        
+                  
+              
+          
               # - task: JMeterInstaller@0
               #   displayName: 'Install JMeter'
 
