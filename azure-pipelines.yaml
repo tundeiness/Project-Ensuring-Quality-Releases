@@ -128,63 +128,63 @@ stages:
               terraform apply -auto-approve tfplan
 
 
-#         - task: ArchiveFiles@2
-#           displayName: 'Archive FakeRestAPI'
-#           inputs:
-#             rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
-#             includeRootFolder: false
-#             archiveType: 'zip'
-#             archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+        - task: ArchiveFiles@2
+          displayName: 'Archive FakeRestAPI'
+          inputs:
+            rootFolderOrFile: '$(projectRoot)/automatedtesting/jmeter/fakerestapi'
+            includeRootFolder: false
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
 
-#         - task: PublishBuildArtifacts@1
-#           displayName: 'Upload Package'
-#           inputs:
-#             PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
-#             ArtifactName: 'drop-fakerestapi'
-#             publishLocation: 'Container'
+        - task: PublishBuildArtifacts@1
+          displayName: 'Upload Package'
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId)-fakerestapi.zip'
+            ArtifactName: 'drop-fakerestapi'
+            publishLocation: 'Container'
 
-# - stage: Deploy
-#   jobs:
-#     - deployment: FakeRestAPI
-#       displayName: 'Deploy to Azure App Service'
-#       environment: 'taskVM'
-#       strategy:
-#         runOnce:
-#           deploy:
-#             steps:
-#               - task: DownloadPipelineArtifact@2
-#                 displayName: 'Download Build Artifact'
-#                 inputs:
-#                   artifact: 'drop-fakerestapi'
-#                   path: '$(Pipeline.Workspace)'
-
-#               - task: AzureWebApp@1
-#                 displayName: 'Deploy to Azure Web App'
-#                 inputs:
-#                   azureSubscription: 'ServiceConnex'
-#                   appName: 'myWebApp-AppService-4b920f48'
-#                   appType: 'webApp'
-#                   package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
-
-
-- stage: PerformanceTest
-  displayName: 'Performance Test Stage'
+- stage: Deploy
   jobs:
-    - deployment: RunPerformanceTest
-      displayName: 'Run Performance Test'
-      environment: 'tasksVM'
+    - deployment: FakeRestAPI
+      displayName: 'Deploy to Azure App Service'
+      environment: 'test'
       strategy:
         runOnce:
           deploy:
             steps:
-              - task: Bash@3
-                displayName: 'Install Java (OpenJDK 11)'
+              - task: DownloadPipelineArtifact@2
+                displayName: 'Download Build Artifact'
                 inputs:
-                  targetType: 'inline'
-                  script: |
-                    sudo apt-get update
-                    sudo apt-get install openjdk-11-jre-headless -y
-                    java -version
+                  artifact: 'drop-fakerestapi'
+                  path: '$(Pipeline.Workspace)'
+
+              - task: AzureWebApp@1
+                displayName: 'Deploy to Azure Web App'
+                inputs:
+                  azureSubscription: 'ServiceConnex'
+                  appName: 'myWebApp-AppService-ca68f018'
+                  appType: 'webApp'
+                  package: '$(Pipeline.Workspace)/drop-fakerestapi/$(Build.BuildId)-fakerestapi.zip'
+
+
+# - stage: PerformanceTest
+#   displayName: 'Performance Test Stage'
+#   jobs:
+#     - deployment: RunPerformanceTest
+#       displayName: 'Run Performance Test'
+#       environment: 'tasksVM'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - task: Bash@3
+#                 displayName: 'Install Java (OpenJDK 11)'
+#                 inputs:
+#                   targetType: 'inline'
+#                   script: |
+#                     sudo apt-get update
+#                     sudo apt-get install openjdk-11-jre-headless -y
+#                     java -version
 
               # - task: JMeterInstaller@0
               #   displayName: 'Install JMeter'
