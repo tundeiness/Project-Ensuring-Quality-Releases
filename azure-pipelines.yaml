@@ -190,42 +190,52 @@ stages:
                 displayName: 'Install JMeter'
 
               - task: Bash@3
-                displayName: 'Endurance Test Suite'
+                displayName: Run JMeter stress
                 inputs:
                   targetType: 'inline'
                   script: |
-                    mkdir -p endurance-test-report
-                    jmeter -n \
-                      -t automatedtesting/jmeter/endurance.jmx \
-                      -l endurance-test-report/endurance-results.jtl \
-                      -e \
-                      -o endurance-test-report
+                    jmeter -n -t automatedtesting/jmeter/Starter.jmx \
+                      -l automatedtesting/jmeter/logs/test-output.csv \
+                      -e -f -o automatedtesting/jmeter/logs/test-log.html \
+                      -j automatedtesting/jmeter/logs/jmeter.log
 
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish Endurance Test Report'
-                inputs:
-                  PathtoPublish: 'endurance-test-report'
-                  ArtifactName: 'endurance-html-report'
-                  publishLocation: 'Container'
+              # - task: Bash@3
+              #   displayName: 'Endurance Test Suite'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       mkdir -p endurance-test-report
+              #       jmeter -n \
+              #         -t automatedtesting/jmeter/endurance.jmx \
+              #         -l endurance-test-report/endurance-results.jtl \
+              #         -e \
+              #         -o endurance-test-report
 
-              - task: Bash@3
-                displayName: 'Stress Test Suite'
-                inputs:
-                  targetType: 'inline'
-                  script: |
-                    mkdir -p stress-test-report
-                    jmeter -n \
-                      -t automatedtesting/jmeter/stress.jmx \
-                      -l stress-test-report/results.jtl \
-                      -e \
-                      -o stress-test-report
+              # - task: PublishBuildArtifacts@1
+              #   displayName: 'Publish Endurance Test Report'
+              #   inputs:
+              #     PathtoPublish: 'endurance-test-report'
+              #     ArtifactName: 'endurance-html-report'
+              #     publishLocation: 'Container'
 
-              - task: PublishBuildArtifacts@1
-                displayName: 'Publish Stress Test Report'
-                inputs:
-                  PathtoPublish: 'stress-test-report'
-                  ArtifactName: 'stress-html-report'
-                  publishLocation: 'Container'
+              # - task: Bash@3
+              #   displayName: 'Stress Test Suite'
+              #   inputs:
+              #     targetType: 'inline'
+              #     script: |
+              #       mkdir -p stress-test-report
+              #       jmeter -n \
+              #         -t automatedtesting/jmeter/stress.jmx \
+              #         -l stress-test-report/results.jtl \
+              #         -e \
+              #         -o stress-test-report
+
+              # - task: PublishBuildArtifacts@1
+              #   displayName: 'Publish Stress Test Report'
+              #   inputs:
+              #     PathtoPublish: 'stress-test-report'
+              #     ArtifactName: 'stress-html-report'
+              #     publishLocation: 'Container'
 
 
                   
