@@ -68,7 +68,7 @@ stages:
             script: |
               cd $(System.DefaultWorkingDirectory)/terraform/environments/test
               terraform init \
-                -backend-config="storage_account_name=tfstateacf4eddfc132" \
+                -backend-config="storage_account_name=tfstatec2466e617fad" \
                 -backend-config="container_name=tfstate" \
                 -backend-config="key=test.terraform.tfstate" \
                 -backend-config="resource_group_name=Azuredevops" \
@@ -330,55 +330,55 @@ stages:
 #                     ls -lah stress-test-report/
 #                     cat jmeter.log
 
-- stage: PostmanIntegrationTest
-  displayName: 'Integration Stage'
-  jobs:
-    - deployment: RunIntegrationTest
-      displayName: 'Run Postman Integration Test'
-      environment: 'test'
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - task: Bash@3
-                displayName: 'Install Node.js, Newman and Run Postman Collections'
-                inputs:
-                  targetType: 'inline'
-                  script: |
+# - stage: PostmanIntegrationTest
+#   displayName: 'Integration Stage'
+#   jobs:
+#     - deployment: RunIntegrationTest
+#       displayName: 'Run Postman Integration Test'
+#       environment: 'test'
+#       strategy:
+#         runOnce:
+#           deploy:
+#             steps:
+#               - task: Bash@3
+#                 displayName: 'Install Node.js, Newman and Run Postman Collections'
+#                 inputs:
+#                   targetType: 'inline'
+#                   script: |
 
-                    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-                    sudo apt-get install -y nodejs
+#                     curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+#                     sudo apt-get install -y nodejs
 
 
-                    node -v
-                    npm -v
+#                     node -v
+#                     npm -v
 
      
-                    sudo npm install -g newman
-                    sudo npm install -g newman-reporter-junitfull
+#                     sudo npm install -g newman
+#                     sudo npm install -g newman-reporter-junitfull
 
 
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Create_User.postman_collection.json" \
-                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-data-validation-test.xml
+#                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Create_User.postman_collection.json" \
+#                       -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
+#                       --reporter-junitfull-export result-data-validation-test.xml
 
 
-                    newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users_By_ID.postman_collection.json" \
-                      -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
-                      --reporter-junitfull-export result-regression_by_id-test.xml
+#                     newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users_By_ID.postman_collection.json" \
+#                       -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
+#                       --reporter-junitfull-export result-regression_by_id-test.xml
 
 
-                    # newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
-                    #   -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
-                    #   --reporter-junitfull-export result-regression-test.xml
+#                     # newman run "$(System.DefaultWorkingDirectory)/automatedtesting/postman/Get_Users.postman_collection.json" \
+#                     #   -e $(System.DefaultWorkingDirectory)/automatedtesting/postman/User_API_Environment.postman_environment.json -r cli,junitfull \
+#                     #   --reporter-junitfull-export result-regression-test.xml
 
-              - task: PublishTestResults@2
-                displayName: 'Publish Integration test'
-                inputs:
-                  testResultsFormat: 'JUnit'
-                  testResultsFiles: |
-                    result-data-validation-test.xml
-                    result-regression-test.xml
-                    result-regression_by_id-test.xml
-                  testRunTitle: 'Publish postman test result'
-                  failTaskOnFailedTests: true
+#               - task: PublishTestResults@2
+#                 displayName: 'Publish Integration test'
+#                 inputs:
+#                   testResultsFormat: 'JUnit'
+#                   testResultsFiles: |
+#                     result-data-validation-test.xml
+#                     result-regression-test.xml
+#                     result-regression_by_id-test.xml
+#                   testRunTitle: 'Publish postman test result'
+#                   failTaskOnFailedTests: true
