@@ -188,6 +188,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import logging
 import os
+import logging
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
 
 # Make sure the log directory exists
 LOG_DIR = "/var/log/selenium"
