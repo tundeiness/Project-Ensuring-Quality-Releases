@@ -4,7 +4,7 @@ resource "random_id" "unique" {
 
 resource "azurerm_app_service_plan" "test" {
   name                = "${var.application_type}-${var.resource_type}-${random_id.unique.hex}"
-  location            = "East US 2"
+  location            = "West Europe"
   resource_group_name = var.resource_group
 
   sku {
@@ -15,7 +15,7 @@ resource "azurerm_app_service_plan" "test" {
 
 resource "azurerm_app_service" "test" {
   name                = "${var.application_type}-${var.resource_type}-${random_id.unique.hex}"
-  location            = "East US 2"
+  location            = "West Europe"
   resource_group_name = var.resource_group
   app_service_plan_id = azurerm_app_service_plan.test.id
 
