@@ -197,6 +197,12 @@ stages:
                   script: |
                     jmeter -n -t automatedtesting/jmeter/Starter.jmx -Jresdir=automatedtesting/jmeter/id.csv
 
+                    jmeter -n \
+                      -t automatedtesting/jmeter/endurance.jmx \
+                      -l automatedtesting/jmeter/logs/endurance-output.csv \
+                      -e -f -o automatedtesting/jmeter/logs/endurance-log.html \
+                      -j automatedtesting/jmeter/logs/endurance-jmeter.log
+
               # - task: JMeterInstaller@0
               #   displayName: 'Install JMeter'
 
