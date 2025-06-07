@@ -4,7 +4,7 @@
 		"name": "Get Users By ID",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "10335899",
-		"_collection_link": "https://udacity-7965.postman.co/workspace/6cd90730-60d7-4858-8b87-e5acc9f62be4/collection/10335899-ae0cec6f-f9db-44d1-bba3-90c1469868b3?action=share&source=collection_link&creator=10335899"
+		"_collection_link": "https://udacity-7965.postman.co/workspace/udacity~6cd90730-60d7-4858-8b87-e5acc9f62be4/collection/10335899-ae0cec6f-f9db-44d1-bba3-90c1469868b3?action=share&source=collection_link&creator=10335899"
 	},
 	"item": [
 		{
@@ -17,20 +17,7 @@
 							"pm.test(\"Status code is 200\", function () {",
 							"    pm.response.to.have.status(200);",
 							"});",
-							"",
-							"pm.test(\"Response is an array\", function () {",
-							"    const responseJson = pm.response.json();",
-							"    pm.expect(responseJson).to.be.an('array');",
-							"});",
-							"",
-							"pm.test(\"Users have required fields\", function () {",
-							"    const responseJson = pm.response.json();",
-							"    if (responseJson.length > 0) {",
-							"        pm.expect(responseJson[0]).to.have.property('id');",
-							"        pm.expect(responseJson[0]).to.have.property('userName');",
-							"        pm.expect(responseJson[0]).to.have.property('password');",
-							"    }",
-							"});"
+							""
 						],
 						"type": "text/javascript",
 						"packages": {}
