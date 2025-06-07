@@ -213,21 +213,12 @@ stages:
                 inputs:
                   targetType: 'inline'
                   script: |
-                    jmeter -n \
-                      -t automatedtesting/jmeter/stress.jmx \
-                      -l stress-test-report/stress-results.jtl \
-                      -e \
-                      -o stress-test-report
-            
-              - task: publishhtmlreport@1
-                displayName: 'Publish Stress Test Results'
-                inputs:
-                  htmlType: 'Jmeter'
-                  JmeterReportsPath: '$(Build.SourcesDirectory)/stress-test-report'    
-                    
-                    
-              - task: Bash@3
-                displayName: 'Print Performance Test Logs'
+                    jmeter -n -t automatedtesting/jmeter/Starter.jmx \
+                           -l automatedtesting/jmeter/results.jtl \
+                           -Jresdir=automatedtesting/jmeter/id.csv
+
+              - task: PublishBuildArtifacts@1
+                displayName: 'Publish JMeter Results'
                 inputs:
                   targetType: 'inline'
                   script: |
