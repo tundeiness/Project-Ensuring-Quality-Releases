@@ -190,7 +190,7 @@ stages:
                 displayName: 'Install JMeter'
                 # inputs:
                 #   jmeterVersion: '5.2.1'
-                - task: Bash@3
+              - task: Bash@3
                 displayName: 'Run JMeter test'
                 inputs:
                   targetType: 'inline'
