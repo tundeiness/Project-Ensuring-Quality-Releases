@@ -198,6 +198,7 @@ stages:
                     jmeter -n -t automatedtesting/jmeter/Starter.jmx \
                            -l automatedtesting/jmeter/results.jtl \
                            -Jresdir=automatedtesting/jmeter/id.csv
+                            -e -f -o automatedtesting/jmeter/result-log.html
 
               - task: PublishBuildArtifacts@1
                 displayName: 'Publish JMeter Results'
