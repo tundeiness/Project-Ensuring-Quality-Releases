@@ -197,6 +197,7 @@ stages:
                     jmeter -n \
                       -t automatedtesting/jmeter/Starter.jmx \
                       -l automatedtesting/jmeter/results.jtl \
+                      -f \
                       -e -o automatedtesting/jmeter/report
 
 
